@@ -1,16 +1,19 @@
 import React, { useEffect, useContext } from 'react';
 import { DraggableSyntheticListeners } from '@dnd-kit/core';
 import { I18nContext } from '../../../../contexts';
-import { HolderOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
+import { GripVertical, CircleAlert, Lock } from 'lucide-react'
 import { Button, Typography } from 'antd';
 
 const { Text } = Typography;
 
 interface Props {
   value: React.ReactNode;
+  icon?: React.ReactNode;
   style?: React.CSSProperties;
   status?: 'is-warning' | 'is-danger';
   title?: string;
+  required?: boolean;
+  readOnly?: boolean;
   dragOverlay?: boolean;
   onClick?: () => void;
   onMouseEnter?: () => void;
@@ -26,9 +29,12 @@ const Item = React.memo(
   React.forwardRef<HTMLLIElement, Props>(
     (
       {
+        icon,
         value,
         status,
         title,
+        required,
+        readOnly,
         style,
         dragOverlay,
         onClick,
@@ -76,6 +82,7 @@ const Item = React.memo(
               display: 'flex',
               alignItems: 'center',
               cursor: 'pointer',
+              gap: '0.5rem',
               ...style,
             }}
             {...props}
@@ -91,8 +98,9 @@ const Item = React.memo(
                 border: 'none',
                 paddingLeft: '0.25rem',
               }}
-              icon={<HolderOutlined style={{ cursor: 'grab' }} />}
+              icon={<GripVertical size={15} style={{ cursor: 'grab' }} />}
             />
+            {icon}
             <Text
               style={{
                 overflow: 'hidden',
@@ -106,12 +114,14 @@ const Item = React.memo(
                 value
               ) : (
                 <span style={{ display: 'flex', alignItems: 'center' }}>
-                  <ExclamationCircleOutlined width={15} style={{ marginRight: '0.5rem' }} />
+                  <CircleAlert size={15} style={{ marginRight: '0.25rem' }} />
                   {status === 'is-warning' ? i18n('noKeyName') : value}
                   {status === 'is-danger' ? i18n('notUniq') : ''}
                 </span>
               )}
             </Text>
+            {readOnly && <Lock size={15} style={{ marginRight: '0.5rem' }} />}
+            {required && <span style={{ color: 'red', marginRight: '0.5rem' }}>*</span>}
           </div>
         </li>
       );

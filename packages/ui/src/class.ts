@@ -1,7 +1,8 @@
 import ReactDOM from 'react-dom';
 import { DESTROYED_ERR_MSG, DEFAULT_LANG } from './constants.js';
-import { debounce, cloneDeep } from './helper.js';
+import { debounce } from './helper.js';
 import {
+  cloneDeep,
   Template,
   Size,
   Lang,
@@ -32,7 +33,7 @@ export abstract class BaseUIClass {
 
   private pluginsRegistry: Plugins = builtInPlugins;
 
-  private options = {};
+  private options: UIOptions = {};
 
   private readonly setSize = debounce(() => {
     if (!this.domContainer) throw Error(DESTROYED_ERR_MSG);
@@ -83,7 +84,7 @@ export abstract class BaseUIClass {
     return this.pluginsRegistry;
   }
 
-  protected getOptions() {
+  public getOptions() {
     return this.options;
   }
 

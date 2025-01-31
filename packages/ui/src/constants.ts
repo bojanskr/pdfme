@@ -8,6 +8,10 @@ export const RULER_HEIGHT = 30;
 
 export const PAGE_GAP = 10;
 
+export const LEFT_SIDEBAR_WIDTH = 45;
+
 export const RIGHT_SIDEBAR_WIDTH = 400;
 
 export const BACKGROUND_COLOR = 'rgb(74, 74, 74)';
+
+export const MAX_ZOOM = 2;

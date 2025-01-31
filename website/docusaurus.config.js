@@ -27,11 +27,6 @@ const config = {
           sidebarPath: require.resolve('./sidebars.js'),
           editUrl: 'https://github.com/pdfme/pdfme/tree/main/website/',
         },
-        blog: {
-          postsPerPage: 'ALL',
-          blogSidebarTitle: 'All posts',
-          blogSidebarCount: 'ALL',
-        },
         theme: {
           customCss: require.resolve('./src/css/custom.css'),
         },
@@ -66,6 +61,12 @@ const config = {
         name: 'custom-docusaurus-plugin',
         configureWebpack() {
           const newConfig = {
+            resolve: {
+              fallback: {
+                fs: false,
+                path: require.resolve('path-browserify'),
+              },
+            },
             plugins: [
               new webpack.IgnorePlugin({
                 resourceRegExp: /canvas/,
@@ -102,22 +103,17 @@ const config = {
           type: 'doc',
           docId: 'getting-started',
           position: 'right',
-          label: 'Docs',
+          label: 'Documentation',
         },
         {
-          to: '/demo',
+          to: '/templates',
           position: 'right',
-          label: 'Demo Apps',
+          label: 'Examples',
         },
         {
           to: '/template-design',
           position: 'right',
           label: 'Template Design',
-        },
-        {
-          to: '/blog',
-          label: 'Blog',
-          position: 'right'
         },
         {
           href: 'https://github.com/pdfme/pdfme',
@@ -129,13 +125,18 @@ const config = {
           label: 'Discord',
           position: 'right',
         },
+        {
+          href: 'https://app.pdfme.com?utm_source=website&utm_content=navbar',
+          label: 'Try pdfme Cloud',
+          position: 'right',
+        }
       ],
     },
     footer: {
       style: 'dark',
       links: [
         {
-          title: 'Docs',
+          title: 'Documentation',
           items: [
             {
               label: 'Getting Started',
@@ -155,13 +156,17 @@ const config = {
               to: '/demo',
             },
             {
+              label: 'Examples',
+              to: '/templates',
+            },
+            {
               label: 'Template Design',
               to: '/template-design',
             },
             {
-              label: 'Blog',
-              to: '/blog',
-            },
+              label: 'Try pdfme Cloud',
+              href: 'https://app.pdfme.com?utm_source=website&utm_content=footer',
+            }
           ],
         },
         {

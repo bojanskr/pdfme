@@ -36,14 +36,14 @@
     "prettier": "prettier --write 'src/**/*.{ts,tsx}'"
   },
   "dependencies": {
-    "@ant-design/icons": "^5.2.6",
+    "@pdfme/converter": "*",
     "@dnd-kit/core": "^6.0.8",
     "@dnd-kit/sortable": "^7.0.2",
     "@scena/react-guides": "^0.16.0",
     "antd": "^5.9.4",
     "form-render": "^2.2.16",
     "hotkeys-js": "^3.8.7",
-    "pdfjs-dist": "^3.11.174",
+    "lucide-react": "^0.460.0",
     "react": "^16.14.0",
     "react-dom": "^16.14.0",
     "react-moveable": "^0.30.3",
@@ -63,6 +63,7 @@
     "eslint-plugin-react": "^7.28.0",
     "eslint-plugin-react-hooks": "^4.3.0",
     "jest-canvas-mock": "^2.3.1",
+    "jest-environment-jsdom": "^29.7.0",
     "process": "^0.11.10",
     "vite": "^5.0.0",
     "vite-plugin-css-injected-by-js": "^3.3.0",
@@ -73,6 +74,7 @@
     "@pdfme/schemas": "latest"
   },
   "jest": {
+    "testEnvironment": "jest-environment-jsdom",
     "setupFiles": [
       "jest-canvas-mock"
     ],
@@ -81,12 +83,12 @@
     ],
     "moduleNameMapper": {
       "\\.(png|css)$": "<rootDir>/__mocks__/assetsTransformer.js",
+      "^@pdfme/converter$": "<rootDir>/../converter/src/index.node.ts",
+      "^@pdfme/schemas/utils$": "<rootDir>/../schemas/src/utils.ts",
       "^antd/es/": "antd/lib/",
       "^form-render/es/": "form-render/lib/",
       "^rc-picker/es/": "rc-picker/lib/",
-      "^lodash-es$": "lodash",
-      "^pdfjs-dist/legacy/build/pdf.js$": "<rootDir>/__mocks__/pdfjs-dist.js",
-      "^pdfjs-dist/legacy/build/pdf.worker.entry.js$": "<rootDir>/__mocks__/pdfjs-dist.js"
+      "^lodash-es$": "lodash"
     },
     "resolver": "ts-jest-resolver",
     "moduleFileExtensions": [
@@ -95,13 +97,12 @@
       "tsx"
     ],
     "transform": {
-      "^.+\\.ts$": "ts-jest",
-      "^.+\\.tsx$": "ts-jest"
-    },
-    "globals": {
-      "ts-jest": {
-        "tsconfig": "tsconfig.json"
-      }
+      "^.+\\.tsx?$": [
+        "ts-jest",
+        {
+          "tsconfig": "tsconfig.json"
+        }
+      ]
     },
     "testMatch": [
       "**/*.test.ts",

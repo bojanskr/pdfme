@@ -17,37 +17,33 @@ exports[`Preview(as Form) snapshot 1`] = `
           style="display: flex; align-items: center;"
         >
           <button
-            class="ant-btn css-dev-only-do-not-override-gzal6t ant-btn-text ant-btn-icon-only"
+            class="ant-btn css-dev-only-do-not-override-1htoz2s ant-btn-text ant-btn-color-default ant-btn-variant-text ant-btn-icon-only"
             type="button"
           >
             <span
               class="ant-btn-icon"
             >
-              <span
-                aria-label="minus"
-                class="anticon anticon-minus"
-                role="img"
-                style="color: rgb(255, 255, 255);"
+              <svg
+                class="lucide lucide-minus"
+                fill="none"
+                height="16"
+                stroke="#fff"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="16"
+                xmlns="http://www.w3.org/2000/svg"
               >
-                <svg
-                  aria-hidden="true"
-                  data-icon="minus"
-                  fill="currentColor"
-                  focusable="false"
-                  height="1em"
-                  viewBox="64 64 896 896"
-                  width="1em"
-                >
-                  <path
-                    d="M872 474H152c-4.4 0-8 3.6-8 8v60c0 4.4 3.6 8 8 8h720c4.4 0 8-3.6 8-8v-60c0-4.4-3.6-8-8-8z"
-                  />
-                </svg>
-              </span>
+                <path
+                  d="M5 12h14"
+                />
+              </svg>
             </span>
             
           </button>
           <span
-            class="ant-typography css-dev-only-do-not-override-gzal6t"
+            class="ant-typography css-dev-only-do-not-override-1htoz2s"
             style="color: rgb(255, 255, 255); font-size: 14px; margin: 8px;"
           >
             <strong>
@@ -56,35 +52,31 @@ exports[`Preview(as Form) snapshot 1`] = `
             </strong>
           </span>
           <button
-            class="ant-btn css-dev-only-do-not-override-gzal6t ant-btn-text ant-btn-icon-only"
+            class="ant-btn css-dev-only-do-not-override-1htoz2s ant-btn-text ant-btn-color-default ant-btn-variant-text ant-btn-icon-only"
             type="button"
           >
             <span
               class="ant-btn-icon"
             >
-              <span
-                aria-label="plus"
-                class="anticon anticon-plus"
-                role="img"
-                style="color: rgb(255, 255, 255);"
+              <svg
+                class="lucide lucide-plus"
+                fill="none"
+                height="16"
+                stroke="#fff"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="16"
+                xmlns="http://www.w3.org/2000/svg"
               >
-                <svg
-                  aria-hidden="true"
-                  data-icon="plus"
-                  fill="currentColor"
-                  focusable="false"
-                  height="1em"
-                  viewBox="64 64 896 896"
-                  width="1em"
-                >
-                  <path
-                    d="M482 152h60q8 0 8 8v704q0 8-8 8h-60q-8 0-8-8V160q0-8 8-8z"
-                  />
-                  <path
-                    d="M192 474h672q8 0 8 8v60q0 8-8 8H160q-8 0-8-8v-60q0-8 8-8z"
-                  />
-                </svg>
-              </span>
+                <path
+                  d="M5 12h14"
+                />
+                <path
+                  d="M12 5v14"
+                />
+              </svg>
             </span>
             
           </button>
@@ -114,6 +106,7 @@ exports[`Preview(as Form) snapshot 1`] = `
                   style="padding: 0px; resize: none; background-color: transparent; display: flex; flex-direction: column; justify-content: flex-start; width: 100%; height: 100%; cursor: text;"
                 >
                   <div
+                    id="text-1"
                     style="font-family: inherit; color: rgb(0, 0, 0); font-size: 30pt; letter-spacing: 0pt; line-height: 1em; text-align: left; white-space: pre-wrap; word-break: break-word; resize: none; outline: none; margin-bottom: 0px; padding-top: 3.436640625px; background-color: transparent;"
                     tabindex="100"
                   />
@@ -171,37 +164,33 @@ exports[`Preview(as Viewer) snapshot 1`] = `
           style="display: flex; align-items: center;"
         >
           <button
-            class="ant-btn css-dev-only-do-not-override-gzal6t ant-btn-text ant-btn-icon-only"
+            class="ant-btn css-dev-only-do-not-override-1htoz2s ant-btn-text ant-btn-color-default ant-btn-variant-text ant-btn-icon-only"
             type="button"
           >
             <span
               class="ant-btn-icon"
             >
-              <span
-                aria-label="minus"
-                class="anticon anticon-minus"
-                role="img"
-                style="color: rgb(255, 255, 255);"
+              <svg
+                class="lucide lucide-minus"
+                fill="none"
+                height="16"
+                stroke="#fff"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="16"
+                xmlns="http://www.w3.org/2000/svg"
               >
-                <svg
-                  aria-hidden="true"
-                  data-icon="minus"
-                  fill="currentColor"
-                  focusable="false"
-                  height="1em"
-                  viewBox="64 64 896 896"
-                  width="1em"
-                >
-                  <path
-                    d="M872 474H152c-4.4 0-8 3.6-8 8v60c0 4.4 3.6 8 8 8h720c4.4 0 8-3.6 8-8v-60c0-4.4-3.6-8-8-8z"
-                  />
-                </svg>
-              </span>
+                <path
+                  d="M5 12h14"
+                />
+              </svg>
             </span>
             
           </button>
           <span
-            class="ant-typography css-dev-only-do-not-override-gzal6t"
+            class="ant-typography css-dev-only-do-not-override-1htoz2s"
             style="color: rgb(255, 255, 255); font-size: 14px; margin: 8px;"
           >
             <strong>
@@ -210,35 +199,31 @@ exports[`Preview(as Viewer) snapshot 1`] = `
             </strong>
           </span>
           <button
-            class="ant-btn css-dev-only-do-not-override-gzal6t ant-btn-text ant-btn-icon-only"
+            class="ant-btn css-dev-only-do-not-override-1htoz2s ant-btn-text ant-btn-color-default ant-btn-variant-text ant-btn-icon-only"
             type="button"
           >
             <span
               class="ant-btn-icon"
             >
-              <span
-                aria-label="plus"
-                class="anticon anticon-plus"
-                role="img"
-                style="color: rgb(255, 255, 255);"
+              <svg
+                class="lucide lucide-plus"
+                fill="none"
+                height="16"
+                stroke="#fff"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                width="16"
+                xmlns="http://www.w3.org/2000/svg"
               >
-                <svg
-                  aria-hidden="true"
-                  data-icon="plus"
-                  fill="currentColor"
-                  focusable="false"
-                  height="1em"
-                  viewBox="64 64 896 896"
-                  width="1em"
-                >
-                  <path
-                    d="M482 152h60q8 0 8 8v704q0 8-8 8h-60q-8 0-8-8V160q0-8 8-8z"
-                  />
-                  <path
-                    d="M192 474h672q8 0 8 8v60q0 8-8 8H160q-8 0-8-8v-60q0-8 8-8z"
-                  />
-                </svg>
-              </span>
+                <path
+                  d="M5 12h14"
+                />
+                <path
+                  d="M12 5v14"
+                />
+              </svg>
             </span>
             
           </button>
@@ -268,6 +253,7 @@ exports[`Preview(as Viewer) snapshot 1`] = `
                   style="padding: 0px; resize: none; background-color: transparent; display: flex; flex-direction: column; justify-content: flex-start; width: 100%; height: 100%; cursor: default;"
                 >
                   <div
+                    id="text-1"
                     style="font-family: inherit; color: rgb(0, 0, 0); font-size: 30pt; letter-spacing: 0pt; line-height: 1em; text-align: left; white-space: pre-wrap; word-break: break-word; resize: none; outline: none; margin-bottom: 0px; padding-top: 3.436640625px; background-color: transparent;"
                   >
                     <span

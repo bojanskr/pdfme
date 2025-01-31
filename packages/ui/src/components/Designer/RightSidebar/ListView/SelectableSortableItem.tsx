@@ -1,10 +1,11 @@
 import React, { useContext } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { SchemaForUI } from '@pdfme/common';
-import { I18nContext } from '../../../../contexts';
+import { PluginsRegistry, I18nContext } from '../../../../contexts';
 import Item from './Item';
 import { useMountStatus } from '../../../../hooks';
 import { theme } from 'antd';
+import PluginIcon from "../../PluginIcon";
 
 interface Props {
   isSelected: boolean;
@@ -29,6 +30,7 @@ const SelectableSortableItem = ({
   const { token } = theme.useToken();
 
   const i18n = useContext(I18nContext);
+  const pluginsRegistry = useContext(PluginsRegistry);
   const { setNodeRef, listeners, isDragging, isSorting, transform, transition } = useSortable({
     id: schema.id,
   });
@@ -40,10 +42,15 @@ const SelectableSortableItem = ({
     onClick: (event: any) => onSelect(schema.id, event.shiftKey),
   };
 
+  const [pluginLabel, thisPlugin] = Object.entries(pluginsRegistry).find(
+    ([label, plugin]) => plugin?.propPanel.defaultSchema.type === schema.type
+  )!;
+
+
   let status: undefined | 'is-warning' | 'is-danger';
-  if (!schema.key) {
+  if (!schema.name) {
     status = 'is-warning';
-  } else if (schemas.find((s) => schema.key && s.key === schema.key && s.id !== schema.id)) {
+  } else if (schemas.find((s) => schema.name && s.name === schema.name && s.id !== schema.id)) {
     status = 'is-danger';
   }
 
@@ -64,9 +71,12 @@ const SelectableSortableItem = ({
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
       onClick={() => onEdit(schema.id)}
-      value={schema.key}
+      icon={thisPlugin && <PluginIcon plugin={thisPlugin} label={pluginLabel} size={20} />}
+      value={schema.name}
       status={status}
       title={title}
+      required={schema.required}
+      readOnly={schema.readOnly}
       style={{ ...selectedStyle, ...style }}
       dragging={isDragging}
       sorting={isSorting}

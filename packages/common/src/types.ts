@@ -23,15 +23,21 @@ import {
   PreviewProps,
   DesignerProps,
   ColorType,
+  LegacySchemaPageArray,
+  SchemaPageArray,
 } from './schema.js';
 
 export type PropPanelSchema = _PropPanelSchema;
-export type ChangeSchemas = (objs: { key: string; value: any; schemaId: string }[]) => void;
+export type ChangeSchemaItem = {
+  key: string,
+  value: any,
+  schemaId: string
+};
+export type ChangeSchemas = (objs: ChangeSchemaItem[]) => void;
 
 /**
  * Properties used for PDF rendering.
  * @template T Type of the extended Schema object.
- * @property {string} key The key of the schema object.
  * @property {string} value The string used for PDF rendering.
  * @property {T} schema Extended Schema object for rendering.
  * @property {BasePdf} basePdf Base PDF object for rendering.
@@ -42,7 +48,6 @@ export type ChangeSchemas = (objs: { key: string; value: any; schemaId: string }
  * @property {Map<any, any>} _cache Cache shared only during the execution of the generate function (useful for caching images, etc. if needed).
  */
 export interface PDFRenderProps<T extends Schema> {
-  key: string;
   value: string;
   schema: T;
   basePdf: BasePdf;
@@ -64,14 +69,12 @@ export interface PDFRenderProps<T extends Schema> {
  * @property {number} [tabIndex] - Tab index for Form.
  * @property {string} [placeholder] - Placeholder text for Form.
  * @property {() => void} [stopEditing] - Stops editing mode, can be used when the mode is 'designer'.
- * @property {string} key - The key of the schema object.
  * @property {string} value - The string used for UI rendering.
  * @property {(arg: { key: string; value: any } | { key: string; value: any }[]) => void} [onChange] - Used to change the value and schema properties. Only applicable when the mode is 'form' or 'designer'.
  * @property {HTMLDivElement} rootElement - The root HTMLDivElement for the UI.
  * @property {UIOptions} options - Options object passed from the Viewer, Form, or Designer.
  * @property {ThemeConfig} theme - An object that merges the 'theme' passed as an options with the default theme.
  * @property {(key: keyof Dict | string) => string} i18n - An object merged based on the options 'lang' and 'labels'.
- * @property {Size} pageSize - The size of the page being edited.
  * @property {Map<any, any>} _cache - Cache shared only during the execution of the render function (useful for caching images, etc. if needed).
  */
 export type UIRenderProps<T extends Schema> = {
@@ -81,14 +84,12 @@ export type UIRenderProps<T extends Schema> = {
   tabIndex?: number;
   placeholder?: string;
   stopEditing?: () => void;
-  key: string;
   value: string;
   onChange?: (arg: { key: string; value: any } | { key: string; value: any }[]) => void;
   rootElement: HTMLDivElement;
   options: UIOptions;
   theme: GlobalToken;
   i18n: (key: keyof Dict | string) => string;
-  pdfJs: typeof import('pdfjs-dist/legacy/build/pdf.js');
   _cache: Map<any, any>;
 };
 
@@ -142,11 +143,15 @@ export interface PropPanel<T extends Schema> {
  * @property {function} pdf Function for rendering PDFs.
  * @property {function} ui Function for rendering UI.
  * @property {PropPanel} propPanel Object for defining the property panel.
+ * @property {string} [icon] Icon SVG for the plugin.
+ * @property {boolean} [uninterruptedEditMode] When editing in the UI, should the field avoid re-rendering while in edit mode?
  */
 export type Plugin<T extends Schema & { [key: string]: any }> = {
   pdf: (arg: PDFRenderProps<T>) => Promise<void> | void;
   ui: (arg: UIRenderProps<T>) => Promise<void> | void;
   propPanel: PropPanel<T>;
+  icon?: string;
+  uninterruptedEditMode?: boolean;
 };
 
 export type Plugins = { [key: string]: Plugin<any> | undefined };
@@ -177,3 +182,5 @@ export type UIOptions = z.infer<typeof UIOptions> & { theme?: ThemeConfig };
 export type UIProps = z.infer<typeof UIProps> & { plugins?: Plugins };
 export type PreviewProps = z.infer<typeof PreviewProps> & { plugins?: Plugins };
 export type DesignerProps = z.infer<typeof DesignerProps> & { plugins?: Plugins };
+export type SchemaPageArray = z.infer<typeof SchemaPageArray>;
+export type LegacySchemaPageArray = z.infer<typeof LegacySchemaPageArray>;

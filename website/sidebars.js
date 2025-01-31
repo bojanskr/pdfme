@@ -5,6 +5,9 @@ const sidebars = {
   tutorialSidebar: [
     'getting-started',
     'supported-features',
+    'tables',
+    'expression',
+    'headers-and-footers',
     {
       type: 'category',
       collapsed: false,
@@ -15,8 +18,18 @@ const sidebars = {
         'custom-schemas',
       ],
     },
-    'tables',
+    {
+      type: 'category',
+      collapsed: true,
+      label: 'Tools(New)',
+      items: [
+        'converter',
+        'manipulator',
+        'optimizer',
+      ],
+    },
     'development-guide',
+    'template-contribution-guide',
   ],
 };
 

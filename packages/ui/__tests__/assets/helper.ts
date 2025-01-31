@@ -1,5 +1,5 @@
 import * as hooks from '../../src/hooks';
-import { uuid, getPdfPageSizes, pdf2Pngs } from '../../src/helper';
+import { uuid } from '../../src/helper';
 import { BLANK_PDF, Template } from '@pdfme/common';
 
 export const setupUIMock = () => {
@@ -13,8 +13,6 @@ export const setupUIMock = () => {
     error: null,
     refresh: () => Promise.resolve(),
   }));
-  (getPdfPageSizes as jest.Mock) = jest.fn().mockReturnValue(Promise.resolve(pageSizes));
-  (pdf2Pngs as jest.Mock) = jest.fn().mockReturnValue(Promise.resolve(backgrounds));
   (uuid as jest.Mock) = jest
     .fn()
     .mockReturnValueOnce('1')
@@ -29,8 +27,9 @@ export const setupUIMock = () => {
 export const getSampleTemplate = (): Template => ({
   basePdf: BLANK_PDF,
   schemas: [
-    {
-      field1: {
+    [
+      {
+        name: 'field1',
         type: 'text',
         content: 'bb',
         position: { x: 20, y: 20 },
@@ -41,13 +40,14 @@ export const getSampleTemplate = (): Template => ({
         characterSpacing: 0,
         lineHeight: 1,
       },
-      field2: {
+      {
+        name: 'field2',
         type: 'image',
         content: 'aaaaaaaaaaaa',
         position: { x: 20, y: 35 },
         width: 100,
         height: 40,
       },
-    },
+    ],
   ],
 });

@@ -11,9 +11,9 @@ import React, {
 } from 'react';
 import { theme, Button } from 'antd';
 import { OnDrag, OnResize, OnClick, OnRotate } from 'react-moveable';
-import { ZOOM, SchemaForUI, Size, ChangeSchemas, BasePdf, isBlankPdf } from '@pdfme/common';
+import { ZOOM, SchemaForUI, Size, ChangeSchemas, BasePdf, isBlankPdf, replacePlaceholders } from '@pdfme/common';
 import { PluginsRegistry } from '../../../contexts';
-import { CloseOutlined } from '@ant-design/icons';
+import { X } from 'lucide-react';
 import { RULER_HEIGHT, RIGHT_SIDEBAR_WIDTH } from '../../../constants';
 import { usePrevious } from '../../../hooks';
 import { uuid, round, flatten } from '../../../helper';
@@ -24,6 +24,7 @@ import Moveable from './Moveable';
 import Guides from './Guides';
 import Mask from './Mask';
 import Padding from './Padding';
+import StaticSchema from '../../StaticSchema';
 
 
 const mm2px = (mm: number) => mm * 3.7795275591;
@@ -61,7 +62,7 @@ const DeleteButton = ({ activeElements: aes }: { activeElements: HTMLElement[] }
         background: token.colorPrimary,
       }}
     >
-      <CloseOutlined style={{ pointerEvents: 'none' }} />
+      <X style={{ pointerEvents: 'none' }} />
     </Button>
   );
 };
@@ -394,6 +395,15 @@ const Canvas = (props: Props, ref: Ref<HTMLDivElement>) => {
               <DeleteButton activeElements={activeElements} />
             )}
             <Padding basePdf={basePdf} />
+            <StaticSchema
+              template={{ schemas: schemasList, basePdf }}
+              input={Object.fromEntries(
+                schemasList.flat().map(({ name, content = '' }) => [name, content])
+              )}
+              scale={scale}
+              totalPages={schemasList.length}
+              currentPage={index + 1}
+            />
             <Guides
               paperSize={paperSize}
               horizontalRef={(e) => {
@@ -433,28 +443,47 @@ const Canvas = (props: Props, ref: Ref<HTMLDivElement>) => {
             )}
           </>
         )}
-        renderSchema={({ schema }) => (
-          <Renderer
-            key={schema.id}
-            schema={schema}
-            basePdf={basePdf}
-            value={schema.content || ''}
-            onChangeHoveringSchemaId={onChangeHoveringSchemaId}
-            mode={
-              editing && activeElements.map((ae) => ae.id).includes(schema.id)
-                ? 'designer'
-                : 'viewer'
-            }
-            onChange={(arg) => {
-              const args = Array.isArray(arg) ? arg : [arg];
-              changeSchemas(args.map(({ key, value }) => ({ key, value, schemaId: schema.id })));
-            }}
-            stopEditing={() => setEditing(false)}
-            outline={`1px ${hoveringSchemaId === schema.id ? 'solid' : 'dashed'} ${schema.readOnly && hoveringSchemaId !== schema.id ? 'transparent' : token.colorPrimary
-              }`}
-            scale={scale}
-          />
-        )}
+        renderSchema={({ schema, index }) => {
+          const mode =
+            editing && activeElements.map((ae) => ae.id).includes(schema.id)
+              ? 'designer'
+              : 'viewer'
+
+          const content = schema.content || '';
+          let value = content;
+
+          if (mode !== 'designer' && schema.readOnly) {
+            const variables = {
+              ...schemasList.flat().reduce((acc, currSchema) => {
+                acc[currSchema.name] = currSchema.content || '';
+                return acc;
+              }, {} as Record<string, string>),
+              totalPages: schemasList.length,
+              currentPage: index + 1,
+            };
+
+            value = replacePlaceholders({ content, variables, schemas: schemasList });
+          }
+
+          return (
+            <Renderer
+              key={schema.id}
+              schema={schema}
+              basePdf={basePdf}
+              value={value}
+              onChangeHoveringSchemaId={onChangeHoveringSchemaId}
+              mode={mode}
+              onChange={(arg) => {
+                const args = Array.isArray(arg) ? arg : [arg];
+                changeSchemas(args.map(({ key, value }) => ({ key, value, schemaId: schema.id })));
+              }}
+              stopEditing={() => setEditing(false)}
+              outline={`1px ${hoveringSchemaId === schema.id ? 'solid' : 'dashed'} ${schema.readOnly && hoveringSchemaId !== schema.id ? 'transparent' : token.colorPrimary
+                }`}
+              scale={scale}
+            />
+          )
+        }}
       />
     </div>
   );

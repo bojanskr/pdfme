@@ -1,80 +1,84 @@
-import { useRef, useState } from "react";
-import { Template, checkTemplate, getInputFromTemplate } from "@pdfme/common";
+import { useRef, useState, useEffect, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
+import { toast } from 'react-toastify';
+import { Template, checkTemplate, getInputFromTemplate, Lang } from "@pdfme/common";
 import { Form, Viewer } from "@pdfme/ui";
 import {
   getFontsData,
-  getTemplateByPreset,
+  getTemplateById,
+  getBlankTemplate,
   handleLoadTemplate,
   generatePDF,
   getPlugins,
   isJsonString,
+  translations,
 } from "./helper";
-
-const headerHeight = 71;
+import { NavItem, NavBar } from "./NavBar";
+import ExternalButton from "./ExternalButton"
 
 type Mode = "form" | "viewer";
 
 
-
-const initTemplate = () => {
-  let template: Template = getTemplateByPreset(localStorage.getItem('templatePreset') || "")
-  try {
-    const templateString = localStorage.getItem("template");
-    if (!templateString) {
-      return template;
-    }
-    const templateJson = JSON.parse(templateString)
-    checkTemplate(templateJson);
-    template = templateJson as Template;
-  } catch {
-    localStorage.removeItem("template");
-  }
-  return template;
-};
-
-function App() {
+function FormAndViewerApp() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const uiRef = useRef<HTMLDivElement | null>(null);
   const ui = useRef<Form | Viewer | null>(null);
-  const [prevUiRef, setPrevUiRef] = useState<Form | Viewer | null>(null);
-
 
   const [mode, setMode] = useState<Mode>(
     (localStorage.getItem("mode") as Mode) ?? "form"
   );
 
-  const buildUi = (mode: Mode) => {
-    const template = initTemplate();
-    let inputs = getInputFromTemplate(template);
+  const buildUi = useCallback(async (mode: Mode) => {
+    if (!uiRef.current) return;
     try {
+      let template: Template = getBlankTemplate();
+      const templateIdFromQuery = searchParams.get("template");
+      searchParams.delete("template");
+      setSearchParams(searchParams, { replace: true });
+      const templateFromLocal = localStorage.getItem("template");
+
+      if (templateIdFromQuery) {
+        const templateJson = await getTemplateById(templateIdFromQuery);
+        checkTemplate(templateJson);
+        template = templateJson;
+
+        if (!templateFromLocal) {
+          localStorage.setItem("template", JSON.stringify(templateJson));
+        }
+      } else if (templateFromLocal) {
+        const templateJson = JSON.parse(templateFromLocal) as Template;
+        checkTemplate(templateJson);
+        template = templateJson;
+      }
+
+      let inputs = getInputFromTemplate(template);
       const inputsString = localStorage.getItem("inputs");
       if (inputsString) {
         const inputsJson = JSON.parse(inputsString);
         inputs = inputsJson;
       }
-    } catch {
-      localStorage.removeItem("inputs");
-    }
 
-    getFontsData().then((font) => {
-      if (uiRef.current) {
-        ui.current = new (mode === "form" ? Form : Viewer)({
-          domContainer: uiRef.current,
-          template,
-          inputs,
-          options: {
-            font,
-            labels: { 'clear': '消去' },
-            theme: {
-              token: {
-                colorPrimary: '#25c2a0',
-              },
+      ui.current = new (mode === "form" ? Form : Viewer)({
+        domContainer: uiRef.current,
+        template,
+        inputs,
+        options: {
+          font: getFontsData(),
+          lang: 'en',
+          labels: { 'signature.clear': '消去' },
+          theme: {
+            token: {
+              colorPrimary: '#25c2a0',
             },
           },
-          plugins: getPlugins(),
-        });
-      }
-    });
-  };
+        },
+        plugins: getPlugins(),
+      });
+    } catch {
+      localStorage.removeItem("inputs");
+      localStorage.removeItem("template");
+    }
+  }, []);
 
   const onChangeMode = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value as Mode;
@@ -115,48 +119,143 @@ function App() {
   const onResetInputs = () => {
     localStorage.removeItem("inputs");
     if (ui.current) {
-      const template = initTemplate();
+      const template = ui.current.getTemplate();
       ui.current.setInputs(getInputFromTemplate(template));
     }
   };
 
-  if (uiRef != prevUiRef) {
-    if (prevUiRef && ui.current) {
-      ui.current.destroy();
-    }
+  useEffect(() => {
     buildUi(mode);
-    setPrevUiRef(uiRef);
-  }
+    return () => {
+      if (ui.current) {
+        ui.current.destroy();
+      }
+    };
+  }, [mode, uiRef, buildUi]);
+
+  const navItems: NavItem[] = [
+    {
+      label: "Lang",
+      content: (
+        <select
+          className="w-full border rounded px-2 py-1"
+          onChange={(e) => {
+            ui.current?.updateOptions({ lang: e.target.value as Lang });
+          }}
+        >
+          {translations.map((t) => (
+            <option key={t.value} value={t.value}>
+              {t.label}
+            </option>
+          ))}
+        </select>
+      ),
+    },
+    {
+      label: "Mode",
+      content: (
+        <div className="mt-2">
+          <input
+            type="radio"
+            id="form"
+            value="form"
+            checked={mode === "form"}
+            onChange={onChangeMode}
+          />
+          <label htmlFor="form" className="mr-2"> Form </label>
+          <input
+            type="radio"
+            id="viewer"
+            value="viewer"
+            checked={mode === "viewer"}
+            onChange={onChangeMode}
+          />
+          <label htmlFor="viewer"> Viewer </label>
+        </div>
+      ),
+    },
+    {
+      label: "Load Template",
+      content: (
+        <input
+          type="file"
+          accept="application/json"
+          onChange={(e) => handleLoadTemplate(e, ui.current)}
+          className="w-full text-sm border rounded"
+        />
+      ),
+    },
+    {
+      label: "",
+      content: (
+        <div className="flex gap-2">
+          <button
+            className="px-2 py-1 border rounded hover:bg-gray-100"
+            onClick={onGetInputs}>
+            Get Inputs
+          </button>
+          <button
+            className="px-2 py-1 border rounded hover:bg-gray-100"
+            onClick={onSetInputs}>
+            Set Inputs
+          </button>
+        </div>
+      ),
+    },
+    {
+      label: "",
+      content: (
+        <div className="flex gap-2">
+
+          <button
+            className="px-2 py-1 border rounded hover:bg-gray-100"
+            onClick={onSaveInputs}>
+            Save Inputs
+          </button>
+          <button
+            className="px-2 py-1 border rounded hover:bg-gray-100"
+            onClick={onResetInputs}>
+            Reset Inputs
+          </button>
+        </div>
+
+      ),
+    },
+    {
+      label: "",
+      content: (
+        <button
+          className="px-2 py-1 border rounded hover:bg-gray-100"
+          onClick={async () => {
+            const startTimer = performance.now()
+            await generatePDF(ui.current);
+            const endTimer = performance.now()
+            toast.dismiss();
+            toast.info(`Generated PDF in ${Math.round(endTimer - startTimer)}ms ⚡️`, {
+              position: "bottom-right",
+            });
+          }}
+        >
+          Generate PDF
+        </button>
+      ),
+    },
+    {
+      label: "",
+      content: (
+        <ExternalButton
+          href="https://github.com/pdfme/pdfme/issues/new?template=template_feedback.yml&title={{TEMPLATE_NAME}}"
+          title="Feedback this template"
+        />)
+    }
+  ];
 
   return (
-    <div>
-      <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", margin: '0 1rem', fontSize: 'small' }}>
-        <strong>Form, Viewer</strong>
-        <span style={{ margin: "0 1rem" }}>:</span>
-        <div>
-          <input type="radio" onChange={onChangeMode} id="form" value="form" checked={mode === "form"} />
-          <label htmlFor="form">Form</label>
-          <input type="radio" onChange={onChangeMode} id="viewer" value="viewer" checked={mode === "viewer"} />
-          <label htmlFor="viewer">Viewer</label>
-        </div>
-        <label style={{ width: 180 }}>
-          Load Template
-          <input type="file" accept="application/json" onChange={(e) => handleLoadTemplate(e, ui.current)} />
-        </label>
-        <span style={{ margin: "0 1rem" }}>/</span>
-        <button onClick={onGetInputs}>Get Inputs</button>
-        <span style={{ margin: "0 1rem" }}>/</span>
-        <button onClick={onSetInputs}>Set Inputs</button>
-        <span style={{ margin: "0 1rem" }}>/</span>
-        <button onClick={onSaveInputs}>Save Inputs</button>
-        <span style={{ margin: "0 1rem" }}>/</span>
-        <button onClick={onResetInputs}>Reset Inputs</button>
-        <span style={{ margin: "0 1rem" }}>/</span>
-        <button onClick={() => generatePDF(ui.current)}>Generate PDF</button>
-      </header>
-      <div ref={uiRef} style={{ width: '100%', height: `calc(100vh - ${headerHeight}px)` }} />
-    </div>
+    <>
+      <NavBar items={navItems} />
+      <div ref={uiRef} className="flex-1 w-full" />
+    </>
   );
 }
 
-export default App;
+export default FormAndViewerApp;
