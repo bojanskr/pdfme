@@ -43,7 +43,7 @@
     "prettier": "prettier --write 'src/**/*.ts'"
   },
   "dependencies": {
-    "@pdfme/pdf-lib": "^1.18.3",
+    "@pdfme/pdf-lib": "*",
     "atob": "^2.1.2",
     "fontkit": "^2.0.2"
   },
@@ -58,18 +58,25 @@
   },
   "jest": {
     "resolver": "ts-jest-resolver",
-    "globalTeardown": "<rootDir>/teardown.mjs",
+    "moduleNameMapper": {
+      "^@pdfme/schemas/utils$": "<rootDir>/../schemas/src/utils.ts",
+      "^.+\\\\.(css|less|scss)$": "identity-obj-proxy"
+    },
+    "transformIgnorePatterns": [
+      "/node_modules/(?!(air-datepicker)/)"
+    ],
     "moduleFileExtensions": [
       "js",
       "ts"
     ],
     "transform": {
-      "^.+\\.ts$": "ts-jest"
-    },
-    "globals": {
-      "ts-jest": {
-        "tsconfig": "tsconfig.esm.json"
-      }
+      "^.+\\.ts?$": [
+        "ts-jest",
+        {
+          "tsconfig": "tsconfig.esm.json"
+        }
+      ],
+      "^.+\\.css$": "<rootDir>/__tests__/cssTransform.js"
     },
     "testMatch": [
       "**/*.test.ts"

@@ -17,13 +17,14 @@ export interface TextSchema extends Schema {
   verticalAlignment: VERTICAL_ALIGNMENT;
   fontSize: number;
   lineHeight: number;
+  strikethrough?: boolean;
+  underline?: boolean;
   characterSpacing: number;
   dynamicFontSize?: {
     min: number;
     max: number;
     fit: DYNAMIC_FONT_SIZE_FIT;
   };
-
   fontColor: string;
   backgroundColor: string;
 }

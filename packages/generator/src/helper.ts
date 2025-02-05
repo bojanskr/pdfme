@@ -38,8 +38,8 @@ export const getEmbedPdfPages = async (arg: { template: Template; pdfDoc: PDFDoc
       trimBox: { x: 0, y: 0, width, height },
     }));
   } else {
-    const willLoadPdf = typeof basePdf === 'string' ? await getB64BasePdf(basePdf) : basePdf;
-    const embedPdf = await PDFDocument.load(willLoadPdf as ArrayBuffer | Uint8Array | string);
+    const willLoadPdf = await getB64BasePdf(basePdf);
+    const embedPdf = await PDFDocument.load(willLoadPdf);
     const embedPdfPages = embedPdf.getPages();
     embedPdfBoxes = embedPdfPages.map((p) => ({
       mediaBox: p.getMediaBox(),
@@ -58,9 +58,22 @@ export const getEmbedPdfPages = async (arg: { template: Template; pdfDoc: PDFDoc
   return { basePages, embedPdfBoxes };
 };
 
+export const validateRequiredFields = (template: Template, inputs: Record<string, any>[]) => {
+  template.schemas.forEach((schemaPage) =>
+    schemaPage.forEach((schema) => {
+      if (schema.required && !schema.readOnly && !inputs.some((input) => input[schema.name])) {
+        throw new Error(
+          `[@pdfme/generator] input for '${schema.name}' is required to generate this PDF`
+        );
+      }
+    })
+  );
+};
+
 export const preprocessing = async (arg: { template: Template; userPlugins: Plugins }) => {
   const { template, userPlugins } = arg;
-  const { schemas } = template;
+  const { schemas, basePdf } = template;
+  const staticSchema: Schema[] = isBlankPdf(basePdf) ? (basePdf.staticSchema ?? []) : [];
 
   const pdfDoc = await PDFDocument.create();
   // @ts-ignore
@@ -72,8 +85,12 @@ export const preprocessing = async (arg: { template: Template; userPlugins: Plug
       : Object.values(builtInPlugins)
   ) as Plugin<Schema>[];
 
-  const schemaTypes = schemas.flatMap((schemaObj) =>
-    Object.values(schemaObj).map((schema) => schema.type)
+  const schemaTypes = Array.from(
+    new Set(
+      schemas
+        .flatMap((schemaPage) => schemaPage.map((schema) => schema.type))
+        .concat(staticSchema.map((schema) => schema.type))
+    )
   );
 
   const renderObj = schemaTypes.reduce((acc, type) => {
@@ -96,7 +113,7 @@ export const postProcessing = (props: { pdfDoc: PDFDocument; options: GeneratorO
     creationDate = new Date(),
     creator = TOOL_NAME,
     keywords = [],
-    language = 'en-US',
+    lang = 'en',
     modificationDate = new Date(),
     producer = TOOL_NAME,
     subject = '',
@@ -106,7 +123,7 @@ export const postProcessing = (props: { pdfDoc: PDFDocument; options: GeneratorO
   pdfDoc.setCreationDate(creationDate);
   pdfDoc.setCreator(creator);
   pdfDoc.setKeywords(keywords);
-  pdfDoc.setLanguage(language);
+  pdfDoc.setLanguage(lang);
   pdfDoc.setModificationDate(modificationDate);
   pdfDoc.setProducer(producer);
   pdfDoc.setSubject(subject);
@@ -120,7 +137,10 @@ export const insertPage = (arg: {
 }) => {
   const { basePage, embedPdfBox, pdfDoc } = arg;
   const size = basePage instanceof PDFEmbeddedPage ? basePage.size() : basePage.getSize();
-  const insertedPage = pdfDoc.addPage([size.width, size.height]);
+  const insertedPage =
+    basePage instanceof PDFEmbeddedPage
+      ? pdfDoc.addPage([size.width, size.height])
+      : pdfDoc.addPage(basePage);
 
   if (basePage instanceof PDFEmbeddedPage) {
     insertedPage.drawPage(basePage);

@@ -16,6 +16,7 @@ async function drawCell(arg: PDFRenderProps<TableSchema>, cell: Cell) {
     ...arg,
     value: cell.raw,
     schema: {
+      name: '',
       type: 'cell',
       position: { x: cell.x, y: cell.y },
       width: cell.width,
@@ -72,6 +73,7 @@ async function drawTableBorder(
   await rectanglePdfRender({
     ...arg,
     schema: {
+      name: '',
       type: 'rectangle',
       borderWidth: lineWidth,
       borderColor: lineColor,
@@ -107,7 +109,11 @@ async function drawTable(arg: PDFRenderProps<TableSchema>, table: Table): Promis
 
 export const pdfRender = async (arg: PDFRenderProps<TableSchema>) => {
   const { value, schema } = arg;
-  const body = getBodyWithRange(value, schema.__bodyRange);
+
+  const body = getBodyWithRange(
+    typeof value !== 'string' ? JSON.stringify(value || '[]') : value,
+    schema.__bodyRange
+  );
   const table = await createSingleTable(body, arg);
   await drawTable(arg, table);
 };

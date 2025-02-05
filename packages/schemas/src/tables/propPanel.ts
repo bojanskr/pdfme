@@ -10,12 +10,21 @@ import { HEX_COLOR_PATTERN } from '../constants.js';
 
 export const propPanel: PropPanel<TableSchema> = {
   schema: ({ activeSchema, options, i18n }) => {
-    // @ts-ignore
-    const head = (activeSchema.head || []) as string[];
+    // @ts-expect-error
+    const tableSchema = activeSchema as TableSchema;
+    const head = tableSchema.head || [];
+    const showHead = tableSchema.showHead || false;
     const font = options.font || { [DEFAULT_FONT_NAME]: { data: '', fallback: true } };
     const fontNames = Object.keys(font);
     const fallbackFontName = getFallbackFontName(font);
     return {
+      showHead: {
+        title: i18n('schemas.table.showHead'),
+        type: 'boolean',
+        widget: 'checkbox',
+        span: 24,
+      },
+      '-------': { type: 'void', widget: 'Divider' },
       tableStyles: {
         title: i18n('schemas.table.tableStyle'),
         type: 'object',
@@ -33,11 +42,15 @@ export const propPanel: PropPanel<TableSchema> = {
             title: i18n('schemas.borderColor'),
             type: 'string',
             widget: 'color',
-            rules: [{ pattern: HEX_COLOR_PATTERN, message: i18n('hexColorPrompt') }],
+            props: {
+              disabledAlpha: true
+            },
+            rules: [{ pattern: HEX_COLOR_PATTERN, message: i18n('validation.hexColor') }],
           },
         },
       },
       headStyles: {
+        hidden: !showHead,
         title: i18n('schemas.table.headStyle'),
         type: 'object',
         widget: 'Card',
@@ -61,8 +74,8 @@ export const propPanel: PropPanel<TableSchema> = {
     };
   },
   defaultSchema: {
+    name: '',
     type: 'table',
-    icon:'<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-table"><path d="M12 3v18"/><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M3 15h18"/></svg>',
     position: { x: 0, y: 0 },
     width: 150,
     height: 20,

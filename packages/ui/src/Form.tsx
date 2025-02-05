@@ -7,15 +7,46 @@ import AppContextProvider from './components/AppContextProvider';
 import Preview from './components/Preview';
 
 class Form extends PreviewUI {
-  private onChangeInputCallback?: (arg: { index: number; value: string; key: string }) => void;
+  private onChangeInputCallback?: (arg: { index: number; value: string; name: string }) => void;
 
   constructor(props: PreviewProps) {
     super(props);
   }
 
-  public onChangeInput(cb: (arg: { index: number; value: string; key: string }) => void) {
+  public onChangeInput(cb: (arg: { index: number; value: string; name: string }) => void) {
     this.onChangeInputCallback = cb;
   }
+
+  public setInputs(inputs: { [key: string]: string }[]): void {
+    const previousInputs = this.getInputs();
+
+    super.setInputs(inputs);
+
+    const changedInputs: Array<{ index: number; name: string; value: string }> = [];
+
+    inputs.forEach((input, index) => {
+      const prevInput = previousInputs[index] || {};
+
+      const allKeys = new Set([...Object.keys(input), ...Object.keys(prevInput)]);
+
+      allKeys.forEach((name) => {
+        const newValue = input[name];
+        const oldValue = prevInput[name];
+
+        if (newValue !== oldValue) {
+          changedInputs.push({ index, name, value: newValue });
+        }
+      });
+    });
+
+    changedInputs.forEach((input) => {
+      if (this.onChangeInputCallback) {
+        this.onChangeInputCallback(input);
+      }
+    });
+  }
+
+
 
   protected render() {
     if (!this.domContainer) throw Error(DESTROYED_ERR_MSG);
@@ -30,14 +61,14 @@ class Form extends PreviewUI {
           template={this.template}
           size={this.size}
           inputs={this.inputs}
-          onChangeInput={(arg: { index: number; value: string; key: string }) => {
-            const { index, value, key } = arg;
+          onChangeInput={(arg: { index: number; value: string; name: string }) => {
+            const { index, value, name } = arg;
             if (this.onChangeInputCallback) {
-              this.onChangeInputCallback({ index, value, key });
+              this.onChangeInputCallback({ index, value, name });
             }
             if (this.inputs && this.inputs[index]) {
-              if (this.inputs[index][key] !== value) {
-                this.inputs[index][key] = value;
+              if (this.inputs[index][name] !== value) {
+                this.inputs[index][name] = value;
                 this.render();
               }
             }

@@ -1,5 +1,6 @@
 import React, { useRef, useState, useContext, useCallback } from 'react';
 import {
+  cloneDeep,
   ZOOM,
   Template,
   Schema,
@@ -14,12 +15,12 @@ import { DndContext } from '@dnd-kit/core';
 import RightSidebar from './RightSidebar/index';
 import LeftSidebar from './LeftSidebar';
 import Canvas from './Canvas/index';
-import { RULER_HEIGHT, RIGHT_SIDEBAR_WIDTH } from '../../constants';
-import { I18nContext, PluginsRegistry } from '../../contexts';
+import { RULER_HEIGHT, RIGHT_SIDEBAR_WIDTH, LEFT_SIDEBAR_WIDTH } from '../../constants';
+import { I18nContext, OptionsContext, PluginsRegistry } from '../../contexts';
 import {
   schemasList2template,
   uuid,
-  cloneDeep,
+  round,
   template2SchemasList,
   getPagesScrollTopByIndex,
   changeSchemas as _changeSchemas,
@@ -51,7 +52,7 @@ const TemplateEditor = ({
   onSaveTemplate: (t: Template) => void;
   onChangeTemplate: (t: Template) => void;
 } & {
-  onChangeTemplate: (t: Template) => void 
+  onChangeTemplate: (t: Template) => void
   onPageCursorChange: (newPageCursor: number) => void
 }) => {
   const past = useRef<SchemaForUI[][]>([]);
@@ -61,6 +62,7 @@ const TemplateEditor = ({
 
   const i18n = useContext(I18nContext);
   const pluginsRegistry = useContext(PluginsRegistry);
+  const options = useContext(OptionsContext);
 
   const [hoveringSchemaId, setHoveringSchemaId] = useState<string | null>(null);
   const [activeElements, setActiveElements] = useState<HTMLElement[]>([]);
@@ -160,16 +162,26 @@ const TemplateEditor = ({
     const [paddingTop, paddingRight, paddingBottom, paddingLeft] = isBlankPdf(template.basePdf) ? template.basePdf.padding : [0, 0, 0, 0];
     const pageSize = pageSizes[pageCursor];
 
+    const newSchemaName = (prefix: string) => {
+      let index = schemasList.reduce((acc, page) => acc + page.length, 1);
+      let newName = prefix + index;
+      while (schemasList.some(page => page.find((s) => s.name === newName))) {
+        index++;
+        newName = prefix + index;
+      }
+      return newName;
+    };
     const ensureMiddleValue = (min: number, value: number, max: number) => Math.min(Math.max(min, value), max)
 
     const s = {
       id: uuid(),
-      key: `${i18n('field')}${schemasList[pageCursor].length + 1}`,
       ...defaultSchema,
+      name: newSchemaName(i18n('field')),
       position: {
         x: ensureMiddleValue(paddingLeft, defaultSchema.position.x, pageSize.width - paddingRight - defaultSchema.width),
         y: ensureMiddleValue(paddingTop, defaultSchema.position.y, pageSize.height - paddingBottom - defaultSchema.height),
       },
+      required: defaultSchema.readOnly ? false : options.requiredByDefault || defaultSchema.required || false,
     } as SchemaForUI;
 
     if (defaultSchema.position.y === 0) {
@@ -223,8 +235,9 @@ const TemplateEditor = ({
     void updateTemplate(template);
   }
 
-  const sizeExcSidebar = {
-    width: sidebarOpen ? size.width - RIGHT_SIDEBAR_WIDTH : size.width,
+  const canvasWidth = size.width - LEFT_SIDEBAR_WIDTH;
+  const sizeExcSidebars = {
+    width: sidebarOpen ? canvasWidth - RIGHT_SIDEBAR_WIDTH : canvasWidth,
     height: size.height,
   };
 
@@ -253,71 +266,75 @@ const TemplateEditor = ({
           const moveY = (event.delta.y - canvasTopOffsetFromPageCorner) / scale;
           const moveX = (event.delta.x - canvasLeftOffsetFromPageCorner) / scale;
 
-          const position = { x: px2mm(Math.max(0, moveX)), y: px2mm(Math.max(0, moveY)) }
+          const position = { x: round(px2mm(Math.max(0, moveX)), 2), y: round(px2mm(Math.max(0, moveY)), 2) }
 
           addSchema({ ...(active.data.current as Schema), position });
         }}
         onDragStart={onEditEnd}
       >
-        <CtlBar
-          size={sizeExcSidebar}
-          pageCursor={pageCursor}
-          pageNum={schemasList.length}
-          setPageCursor={(p) => {
-            if (!canvasRef.current) return;
-            canvasRef.current.scrollTop = getPagesScrollTopByIndex(pageSizes, p, scale);
-            setPageCursor(p);
-            onEditEnd();
-          }}
-          zoomLevel={zoomLevel}
-          setZoomLevel={setZoomLevel}
-          {...pageManipulation}
-        />
         <LeftSidebar
           height={canvasRef.current ? canvasRef.current.clientHeight : 0}
           scale={scale}
           basePdf={template.basePdf}
         />
 
-        <RightSidebar
-          hoveringSchemaId={hoveringSchemaId}
-          onChangeHoveringSchemaId={onChangeHoveringSchemaId}
-          height={canvasRef.current ? canvasRef.current.clientHeight : 0}
-          size={size}
-          pageSize={pageSizes[pageCursor] ?? []}
-          activeElements={activeElements}
-          schemas={schemasList[pageCursor] ?? []}
-          changeSchemas={changeSchemas}
-          onSortEnd={onSortEnd}
-          onEdit={id => {
-            const editingElem = document.getElementById(id);
-            editingElem && onEdit([editingElem]);
-          }}
-          onEditEnd={onEditEnd}
-          deselectSchema={onEditEnd}
-          sidebarOpen={sidebarOpen}
-          setSidebarOpen={setSidebarOpen}
-        />
+        <div style={{ position: 'absolute', width: canvasWidth, marginLeft: LEFT_SIDEBAR_WIDTH }}>
+          <CtlBar
+            size={sizeExcSidebars}
+            pageCursor={pageCursor}
+            pageNum={schemasList.length}
+            setPageCursor={(p) => {
+              if (!canvasRef.current) return;
+              canvasRef.current.scrollTop = getPagesScrollTopByIndex(pageSizes, p, scale);
+              setPageCursor(p);
+              onEditEnd();
+            }}
+            zoomLevel={zoomLevel}
+            setZoomLevel={setZoomLevel}
+            {...pageManipulation}
+          />
 
-        <Canvas
-          ref={canvasRef}
-          paperRefs={paperRefs}
-          basePdf={template.basePdf}
-          hoveringSchemaId={hoveringSchemaId}
-          onChangeHoveringSchemaId={onChangeHoveringSchemaId}
-          height={size.height - RULER_HEIGHT * ZOOM}
-          pageCursor={pageCursor}
-          scale={scale}
-          size={sizeExcSidebar}
-          pageSizes={pageSizes}
-          backgrounds={backgrounds}
-          activeElements={activeElements}
-          schemasList={schemasList}
-          changeSchemas={changeSchemas}
-          removeSchemas={removeSchemas}
-          sidebarOpen={sidebarOpen}
-          onEdit={onEdit}
-        />
+          <RightSidebar
+            hoveringSchemaId={hoveringSchemaId}
+            onChangeHoveringSchemaId={onChangeHoveringSchemaId}
+            height={canvasRef.current ? canvasRef.current.clientHeight : 0}
+            size={size}
+            pageSize={pageSizes[pageCursor] ?? []}
+            activeElements={activeElements}
+            schemasList={schemasList}
+            schemas={schemasList[pageCursor] ?? []}
+            changeSchemas={changeSchemas}
+            onSortEnd={onSortEnd}
+            onEdit={id => {
+              const editingElem = document.getElementById(id);
+              editingElem && onEdit([editingElem]);
+            }}
+            onEditEnd={onEditEnd}
+            deselectSchema={onEditEnd}
+            sidebarOpen={sidebarOpen}
+            setSidebarOpen={setSidebarOpen}
+          />
+
+          <Canvas
+            ref={canvasRef}
+            paperRefs={paperRefs}
+            basePdf={template.basePdf}
+            hoveringSchemaId={hoveringSchemaId}
+            onChangeHoveringSchemaId={onChangeHoveringSchemaId}
+            height={size.height - RULER_HEIGHT * ZOOM}
+            pageCursor={pageCursor}
+            scale={scale}
+            size={sizeExcSidebars}
+            pageSizes={pageSizes}
+            backgrounds={backgrounds}
+            activeElements={activeElements}
+            schemasList={schemasList}
+            changeSchemas={changeSchemas}
+            removeSchemas={removeSchemas}
+            sidebarOpen={sidebarOpen}
+            onEdit={onEdit}
+          />
+        </div>
       </DndContext>
     </Root>
   );

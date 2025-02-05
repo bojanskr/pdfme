@@ -29,6 +29,11 @@
       "import": "./dist/esm/src/index.js",
       "require": "./dist/cjs/src/index.js",
       "types": "./dist/types/src/index.d.ts"
+    },
+    "./utils": {
+      "import": "./dist/esm/src/utils.js",
+      "require": "./dist/cjs/src/utils.js",
+      "types": "./dist/types/src/utils.d.ts"
     }
   },
   "scripts": {
@@ -43,10 +48,13 @@
     "prettier": "prettier --write 'src/**/*.ts'"
   },
   "dependencies": {
-    "@pdfme/pdf-lib": "^1.18.3",
+    "@pdfme/pdf-lib": "*",
+    "air-datepicker": "^3.5.3",
     "bwip-js": "^4.1.1",
+    "date-fns": "^4.1.0",
     "fast-xml-parser": "^4.3.2",
-    "fontkit": "^2.0.2"
+    "fontkit": "^2.0.2",
+    "lucide": "^0.460.0"
   },
   "devDependencies": {
     "@pdfme/common": "file:../common",
@@ -66,12 +74,12 @@
       "ts"
     ],
     "transform": {
-      "^.+\\.ts$": "ts-jest"
-    },
-    "globals": {
-      "ts-jest": {
-        "tsconfig": "tsconfig.esm.json"
-      }
+      "^.+\\.ts?$": [
+        "ts-jest",
+        {
+          "tsconfig": "tsconfig.esm.json"
+        }
+      ]
     },
     "testMatch": [
       "**/*.test.ts"

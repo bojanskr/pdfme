@@ -1,4 +1,4 @@
-import React, { useContext } from 'react';
+import React, { useContext, useState, useEffect } from 'react';
 import {
   Schema,
   Plugin,
@@ -8,7 +8,10 @@ import { theme, Button } from 'antd';
 import { useDraggable } from '@dnd-kit/core';
 import { CSS } from "@dnd-kit/utilities";
 import Renderer from '../Renderer';
+import { LEFT_SIDEBAR_WIDTH } from '../../constants';
 import { PluginsRegistry } from '../../contexts';
+import PluginIcon from "./PluginIcon";
+
 
 const Draggable = (props: { plugin: Plugin<any>, scale: number, basePdf: BasePdf, children: React.ReactNode }) => {
   const { scale, basePdf, plugin } = props;
@@ -23,8 +26,7 @@ const Draggable = (props: { plugin: Plugin<any>, scale: number, basePdf: BasePdf
       {isDragging &&
         <div style={{ transform: `scale(${scale})` }}>
           <Renderer
-            key={defaultSchema.type}
-            schema={{ ...defaultSchema, id: defaultSchema.type, key: defaultSchema.type }}
+            schema={{ ...defaultSchema, id: defaultSchema.type }}
             basePdf={basePdf}
             value={defaultSchema.content || ''}
             onChangeHoveringSchemaId={() => { void 0 }}
@@ -44,34 +46,48 @@ const Draggable = (props: { plugin: Plugin<any>, scale: number, basePdf: BasePdf
 const LeftSidebar = ({ height, scale, basePdf }: { height: number, scale: number, basePdf: BasePdf }) => {
   const { token } = theme.useToken();
   const pluginsRegistry = useContext(PluginsRegistry);
+  const [isDragging, setIsDragging] = useState(false);
+
+  useEffect(() => {
+    const handleMouseUp = () => {
+      if (isDragging) {
+        setIsDragging(false);
+      }
+    };
+
+    document.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging]);
 
   return <div
     style={{
       left: 0,
-      position: 'absolute',
       right: 0,
+      position: 'absolute',
       zIndex: 1,
       height,
+      width: LEFT_SIDEBAR_WIDTH,
       background: token.colorBgLayout,
       textAlign: 'center',
-      width: 45,
+      overflow: isDragging ? 'visible' : 'auto',
     }}
   >
     {Object.entries(pluginsRegistry).map(([label, plugin]) => {
       if (!plugin?.propPanel.defaultSchema) return null;
+
       return <Draggable
         key={label}
         scale={scale}
         basePdf={basePdf}
         plugin={plugin}>
         <Button
-          title={label}
-          style={{ width: 35, height: 35, marginTop: '0.25rem', padding: '0.25rem' }}>
-          {plugin.propPanel.defaultSchema.icon ?
-            <div dangerouslySetInnerHTML={{ __html: plugin.propPanel.defaultSchema.icon }} />
-            :
-            <div style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</div>
-          }
+          onMouseDown={() => setIsDragging(true)}
+          style={{ width: 35, height: 35, marginTop: '0.25rem', padding: '0.25rem' }}
+        >
+          <PluginIcon plugin={plugin} label={label} />
         </Button>
       </Draggable>
     })}

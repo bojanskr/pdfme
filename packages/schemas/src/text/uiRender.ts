@@ -1,5 +1,6 @@
 import type * as CSS from 'csstype';
-import { UIRenderProps, Schema, getDefaultFont } from '@pdfme/common';
+import type { Font as FontKitFont } from 'fontkit';
+import { UIRenderProps, getDefaultFont } from '@pdfme/common';
 import type { TextSchema } from './types';
 import {
   DEFAULT_FONT_SIZE,
@@ -21,48 +22,153 @@ import {
 } from './helper.js';
 import { isEditable } from '../utils.js';
 
-const mapVerticalAlignToFlex = (verticalAlignmentValue: string | undefined) => {
-  switch (verticalAlignmentValue) {
-    case VERTICAL_ALIGN_TOP:
-      return 'flex-start';
-    case VERTICAL_ALIGN_MIDDLE:
-      return 'center';
-    case VERTICAL_ALIGN_BOTTOM:
-      return 'flex-end';
-  }
-  return 'flex-start';
-};
+const replaceUnsupportedChars = (text: string, fontKitFont: FontKitFont): string => {
+  const charSupportCache: { [char: string]: boolean } = {};
 
-const getBackgroundColor = (value: string, schema: Schema) => {
-  if (!value || !schema.backgroundColor) return 'transparent';
-  return schema.backgroundColor as string;
+  const isCharSupported = (char: string): boolean => {
+    if (char in charSupportCache) {
+      return charSupportCache[char];
+    }
+    const isSupported = fontKitFont.hasGlyphForCodePoint(char.codePointAt(0) || 0);
+    charSupportCache[char] = isSupported;
+    return isSupported;
+  };
+
+  const segments = text.split(/(\r\n|\n|\r)/);
+
+  return segments
+    .map((segment) => {
+      if (/\r\n|\n|\r/.test(segment)) {
+        return segment;
+      }
+
+      return segment
+        .split('')
+        .map((char) => {
+          if (/\s/.test(char) || char.charCodeAt(0) < 32) {
+            return char;
+          }
+
+          return isCharSupported(char) ? char : '〿';
+        })
+        .join('');
+    })
+    .join('');
 };
 
 export const uiRender = async (arg: UIRenderProps<TextSchema>) => {
-  const {
-    value,
-    schema,
-    rootElement,
-    mode,
-    onChange,
-    stopEditing,
-    tabIndex,
-    placeholder,
-    options,
-    _cache,
-  } = arg;
+  const { value, schema, mode, onChange, stopEditing, tabIndex, placeholder, options, _cache } =
+    arg;
+  const usePlaceholder = isEditable(mode, schema) && placeholder && !value;
+  const getText = (element: HTMLDivElement) => {
+    let text = element.innerText;
+    if (text.endsWith('\n')) {
+      // contenteditable adds additional newline char retrieved with innerText
+      text = text.slice(0, -1);
+    }
+    return text;
+  };
+  const font = options?.font || getDefaultFont();
+  const [fontKitFont, textBlock] = await Promise.all([
+    getFontKitFont(schema.fontName, font, _cache),
+    buildStyledTextContainer(arg, usePlaceholder ? placeholder : value),
+  ]);
+
+  const processedText = replaceUnsupportedChars(value, fontKitFont);
+
+  if (!isEditable(mode, schema)) {
+    // Read-only mode
+    textBlock.innerHTML = processedText
+      .split('')
+      .map(
+        (l, i) =>
+          `<span style="letter-spacing:${
+            String(value).length === i + 1 ? 0 : 'inherit'
+          };">${l}</span>`
+      )
+      .join('');
+    return;
+  }
+
+  makeElementPlainTextContentEditable(textBlock);
+  textBlock.tabIndex = tabIndex || 0;
+  textBlock.innerText = mode === 'designer' ? value : processedText;
+  textBlock.addEventListener('blur', (e: Event) => {
+    onChange && onChange({ key: 'content', value: getText(e.target as HTMLDivElement) });
+    stopEditing && stopEditing();
+  });
+
+  if (schema.dynamicFontSize) {
+    let dynamicFontSize: undefined | number = undefined;
+    const font = options?.font || getDefaultFont();
+    const fontKitFont = await getFontKitFont(schema.fontName, font, _cache);
+
+    textBlock.addEventListener('keyup', () => {
+      setTimeout(() => {
+        void (async () => {
+          if (!textBlock.textContent) return;
+          dynamicFontSize = await calculateDynamicFontSize({
+            textSchema: schema,
+            font,
+            value: getText(textBlock),
+            startingFontSize: dynamicFontSize,
+            _cache,
+          });
+          textBlock.style.fontSize = `${dynamicFontSize}pt`;
+
+          const { topAdj: newTopAdj, bottomAdj: newBottomAdj } = getBrowserVerticalFontAdjustments(
+            fontKitFont,
+            dynamicFontSize ?? schema.fontSize ?? DEFAULT_FONT_SIZE,
+            schema.lineHeight ?? DEFAULT_LINE_HEIGHT,
+            schema.verticalAlignment ?? DEFAULT_VERTICAL_ALIGNMENT
+          );
+          textBlock.style.paddingTop = `${newTopAdj}px`;
+          textBlock.style.marginBottom = `${newBottomAdj}px`;
+        })();
+      }, 0);
+    });
+  }
+
+  if (usePlaceholder) {
+    textBlock.style.color = PLACEHOLDER_FONT_COLOR;
+    textBlock.addEventListener('focus', () => {
+      if (textBlock.innerText === placeholder) {
+        textBlock.innerText = '';
+        textBlock.style.color = schema.fontColor ?? DEFAULT_FONT_COLOR;
+      }
+    });
+  }
+
+  if (mode === 'designer') {
+    setTimeout(() => {
+      textBlock.focus();
+      // Set the focus to the end of the editable element when you focus, as we would for a textarea
+      const selection = window.getSelection();
+      const range = document.createRange();
+      if (selection && range) {
+        range.selectNodeContents(textBlock);
+        range.collapse(false); // Collapse range to the end
+        selection?.removeAllRanges();
+        selection?.addRange(range);
+      }
+    });
+  }
+};
+
+export const buildStyledTextContainer = async (arg: UIRenderProps<TextSchema>, value: string) => {
+  const { schema, rootElement, mode, options, _cache } = arg;
   const font = options?.font || getDefaultFont();
 
   let dynamicFontSize: undefined | number = undefined;
-  const getCdfArg = (v: string) => ({
-    textSchema: schema,
-    font,
-    value: v,
-    startingFontSize: dynamicFontSize,
-    _cache,
-  });
+
   if (schema.dynamicFontSize && value) {
-    dynamicFontSize = await calculateDynamicFontSize(getCdfArg(value));
+    dynamicFontSize = await calculateDynamicFontSize({
+      textSchema: schema,
+      font,
+      value,
+      startingFontSize: dynamicFontSize,
+      _cache,
+    });
   }
 
   const fontKitFont = await getFontKitFont(schema.fontName, font, _cache);
@@ -96,6 +202,11 @@ export const uiRender = async (arg: UIRenderProps<TextSchema>) => {
   rootElement.innerHTML = '';
   rootElement.appendChild(container);
 
+  // text decoration
+  const textDecorations = [];
+  if (schema.strikethrough) textDecorations.push('line-through');
+  if (schema.underline) textDecorations.push('underline');
+
   const textBlockStyle: CSS.Properties = {
     // Font formatting styles
     fontFamily: schema.fontName ? `'${schema.fontName}'` : 'inherit',
@@ -113,101 +224,60 @@ export const uiRender = async (arg: UIRenderProps<TextSchema>) => {
     marginBottom: `${bottomAdjustment}px`,
     paddingTop: `${topAdjustment}px`,
     backgroundColor: 'transparent',
+    textDecoration: textDecorations.join(' '),
   };
+
   const textBlock = document.createElement('div');
+  textBlock.id = 'text-' + String(schema.id);
   Object.assign(textBlock.style, textBlockStyle);
 
-  if (isEditable(mode, schema)) {
-    if (!isFirefox()) {
-      textBlock.contentEditable = 'plaintext-only';
-    } else {
-      textBlock.contentEditable = 'true';
-      textBlock.addEventListener('keydown', (e: KeyboardEvent) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-          e.preventDefault();
-          document.execCommand('insertLineBreak', false, undefined);
-        }
-      });
+  container.appendChild(textBlock);
 
-      textBlock.addEventListener('paste', (e: ClipboardEvent) => {
-        e.preventDefault();
-        const paste = e.clipboardData?.getData('text');
-        const selection = window.getSelection();
-        if (!selection?.rangeCount) return;
-        selection.deleteFromDocument();
-        selection.getRangeAt(0).insertNode(document.createTextNode(paste || ''));
-        selection.collapseToEnd();
-      });
-    }
-    textBlock.tabIndex = tabIndex || 0;
-    textBlock.innerText = value;
-    textBlock.addEventListener('blur', (e: Event) => {
-      onChange && onChange({ key: 'content', value: (e.target as HTMLDivElement).innerText });
-      stopEditing && stopEditing();
-    });
+  return textBlock;
+};
 
-    if (schema.dynamicFontSize) {
-      textBlock.addEventListener('keyup', () => {
-        setTimeout(() => {
-          void (async () => {
-            if (!textBlock.textContent) return;
-            dynamicFontSize = await calculateDynamicFontSize(getCdfArg(textBlock.textContent));
-            textBlock.style.fontSize = `${dynamicFontSize}pt`;
-
-            const { topAdj: newTopAdj, bottomAdj: newBottomAdj } =
-              getBrowserVerticalFontAdjustments(
-                fontKitFont,
-                dynamicFontSize ?? schema.fontSize ?? DEFAULT_FONT_SIZE,
-                schema.lineHeight ?? DEFAULT_LINE_HEIGHT,
-                schema.verticalAlignment ?? DEFAULT_VERTICAL_ALIGNMENT
-              );
-            textBlock.style.paddingTop = `${newTopAdj}px`;
-            textBlock.style.marginBottom = `${newBottomAdj}px`;
-          })();
-        }, 0);
-      });
-    }
-
-    if (placeholder && !value) {
-      textBlock.innerText = placeholder;
-      textBlock.style.color = PLACEHOLDER_FONT_COLOR;
-      if (schema.dynamicFontSize) {
-        const fontSize = await calculateDynamicFontSize(getCdfArg(placeholder));
-        textBlock.style.fontSize = `${fontSize}pt`;
-      }
-      textBlock.addEventListener('focus', () => {
-        if (textBlock.innerText === placeholder) {
-          textBlock.innerText = '';
-          textBlock.style.color = schema.fontColor ?? DEFAULT_FONT_COLOR;
-        }
-      });
-    }
-
-    container.appendChild(textBlock);
-
-    if (mode === 'designer') {
-      setTimeout(() => {
-        textBlock.focus();
-        // Set the focus to the end of the editable element when you focus, as we would for a textarea
-        const selection = window.getSelection();
-        const range = document.createRange();
-        range.selectNodeContents(textBlock);
-        range.collapse(false); // Collapse range to the end
-        selection?.removeAllRanges();
-        selection?.addRange(range);
-      });
-    }
-  } else {
-    textBlock.innerHTML = value
-      .split('')
-      .map(
-        (l: string, i: number) =>
-          `<span style="letter-spacing:${
-            String(value).length === i + 1 ? 0 : 'inherit'
-          };">${l}</span>`
-      )
-      .join('');
-
-    container.appendChild(textBlock);
+/**
+ * Firefox doesn't support 'plaintext-only' contentEditable mode, which we want to avoid mark-up.
+ * This function adds a workaround for Firefox to make the contentEditable element behave like 'plaintext-only'.
+ */
+export const makeElementPlainTextContentEditable = (element: HTMLElement) => {
+  if (!isFirefox()) {
+    element.contentEditable = 'plaintext-only';
+    return;
   }
+
+  element.contentEditable = 'true';
+  element.addEventListener('keydown', (e: KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      document.execCommand('insertLineBreak', false, undefined);
+    }
+  });
+
+  element.addEventListener('paste', (e: ClipboardEvent) => {
+    e.preventDefault();
+    const paste = e.clipboardData?.getData('text');
+    const selection = window.getSelection();
+    if (!selection?.rangeCount) return;
+    selection.deleteFromDocument();
+    selection.getRangeAt(0).insertNode(document.createTextNode(paste || ''));
+    selection.collapseToEnd();
+  });
+};
+
+export const mapVerticalAlignToFlex = (verticalAlignmentValue: string | undefined) => {
+  switch (verticalAlignmentValue) {
+    case VERTICAL_ALIGN_TOP:
+      return 'flex-start';
+    case VERTICAL_ALIGN_MIDDLE:
+      return 'center';
+    case VERTICAL_ALIGN_BOTTOM:
+      return 'flex-end';
+  }
+  return 'flex-start';
+};
+
+export const getBackgroundColor = (value: string, schema: { backgroundColor?: string }) => {
+  if (!value || !schema.backgroundColor) return 'transparent';
+  return schema.backgroundColor;
 };

@@ -1,6 +1,12 @@
 import type { Schema, Plugin, PDFRenderProps, UIRenderProps } from '@pdfme/common';
-import { rotatePoint, convertForPdfLayoutProps, hex2PrintingColor } from '../utils.js';
+import {
+  rotatePoint,
+  convertForPdfLayoutProps,
+  hex2PrintingColor,
+  createSvgStr,
+} from '../utils.js';
 import { HEX_COLOR_PATTERN } from '../constants.js';
+import { Minus } from 'lucide';
 
 const DEFAULT_LINE_COLOR = '#000000';
 
@@ -44,21 +50,25 @@ const lineSchema: Plugin<LineSchema> = {
         title: i18n('schemas.color'),
         type: 'string',
         widget: 'color',
+        props: {
+          disabledAlpha: true
+        },
         required: true,
-        rules: [{ pattern: HEX_COLOR_PATTERN, message: i18n('hexColorPrompt') }],
+        rules: [{ pattern: HEX_COLOR_PATTERN, message: i18n('validation.hexColor') }],
       },
     }),
     defaultSchema: {
+      name: '',
       type: 'line',
-      icon:'<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-minus"><path d="M5 12h14"/></svg>',
       position: { x: 0, y: 0 },
       width: 50,
-      height: 1,
+      height: 0.5,
       rotate: 0,
       opacity: 1,
       readOnly: true,
       color: DEFAULT_LINE_COLOR,
     },
   },
+  icon: createSvgStr(Minus),
 };
 export default lineSchema;

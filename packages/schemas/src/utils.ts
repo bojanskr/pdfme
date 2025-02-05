@@ -1,7 +1,8 @@
 import type * as CSS from 'csstype';
-import { cmyk, degrees, degreesToRadians, rgb } from '@pdfme/pdf-lib';
+import { cmyk, degrees, degreesToRadians, rgb, Color } from '@pdfme/pdf-lib';
 import { Schema, mm2pt, Mode, isHexValid, ColorType } from '@pdfme/common';
-
+import { IconNode } from 'lucide';
+import { getDynamicHeightsForTable as _getDynamicHeightsForTable } from './tables/dynamicTemplate.js';
 export const convertForPdfLayoutProps = ({
   schema,
   pageHeight,
@@ -60,6 +61,10 @@ export const rotatePoint = (
   return { x, y };
 };
 
+export const getDynamicHeightsForTable = _getDynamicHeightsForTable;
+
+// ----------------------------------------
+
 export const addAlphaToHex = (hex: string, alphaPercentage: number) => {
   if (!/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/i.test(hex)) {
     throw new Error('Invalid HEX color code');
@@ -103,7 +108,7 @@ export const hex2RgbColor = (hexString: string | undefined) => {
   return undefined;
 };
 
-export const hex2CmykColor = (hexString: string | undefined) => {
+const hex2CmykColor = (hexString: string | undefined) => {
   if (hexString) {
     const isValid = isHexValid(hexString);
 
@@ -141,10 +146,12 @@ export const hex2CmykColor = (hexString: string | undefined) => {
   return undefined;
 };
 
-export const hex2PrintingColor = (hexString: string | undefined, colorType?: ColorType) => {
-  return colorType?.toLocaleLowerCase() == 'cmyk'
-    ? hex2CmykColor(hexString)
-    : hex2RgbColor(hexString);
+export const hex2PrintingColor = (color?: string | Color, colorType?: ColorType) => {
+  // if color is already CMYK, RGB or Grayscale, does not required to convert
+  if (typeof color === 'object') return color
+  return colorType?.toLowerCase() == 'cmyk'
+    ? hex2CmykColor(color)
+    : hex2RgbColor(color);
 };
 
 export const readFile = (input: File | FileList | null): Promise<string | ArrayBuffer> =>
@@ -203,4 +210,23 @@ export const createErrorElm = () => {
 
   return container;
 };
-export const cloneDeep = <T>(value: T): T => JSON.parse(JSON.stringify(value));
+
+export const createSvgStr = (icon: IconNode, attrs?: Record<string, string>): string => {
+  const createElementString = (node: IconNode): string => {
+    const [tag, attributes, children = []] = node;
+
+    const mergedAttributes = tag === 'svg' ? { ...attributes, ...attrs } : attributes;
+
+    const attrString = Object.entries(mergedAttributes)
+      .map(([key, value]) => `${key}="${value}"`)
+      .join(' ');
+
+    const childrenString = children
+      .map((child) => createElementString(child))
+      .join('');
+
+    return `<${tag} ${attrString}>${childrenString}</${tag}>`;
+  };
+
+  return createElementString(icon);
+};

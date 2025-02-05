@@ -1,6 +1,15 @@
 import { z } from 'zod';
 import { Buffer } from 'buffer';
-import { Schema, Template, Font, BasePdf, Plugins, BlankPdf, CommonOptions } from './types';
+import {
+  Schema,
+  Template,
+  Font,
+  BasePdf,
+  Plugins,
+  BlankPdf,
+  LegacySchemaPageArray,
+  SchemaPageArray,
+} from './types';
 import {
   Inputs as InputsSchema,
   UIOptions as UIOptionsSchema,
@@ -18,6 +27,8 @@ import {
   DEFAULT_FONT_NAME,
   DEFAULT_FONT_VALUE,
 } from './constants.js';
+
+export const cloneDeep = structuredClone;
 
 const uniq = <T>(array: Array<T>) => Array.from(new Set(array));
 
@@ -77,12 +88,38 @@ export const isHexValid = (hex: string): boolean => {
   return /^#(?:[A-Fa-f0-9]{3,4}|[A-Fa-f0-9]{6}|[A-Fa-f0-9]{8})$/i.test(hex);
 };
 
+/**
+ * Migrate from legacy keyed object format to array format
+ * @param template Template
+ */
+export const migrateTemplate = (template: Template) => {
+  if (!template.schemas) {
+    return;
+  }
+
+  if (
+    Array.isArray(template.schemas) &&
+    template.schemas.length > 0 &&
+    !Array.isArray(template.schemas[0])
+  ) {
+    template.schemas = (template.schemas as unknown as LegacySchemaPageArray).map(
+      (page: Record<string, Schema>) =>
+        Object.entries(page).map(([key, value]) => ({
+          ...value,
+          name: key,
+        }))
+    );
+  }
+};
+
 export const getInputFromTemplate = (template: Template): { [key: string]: string }[] => {
+  migrateTemplate(template);
+
   const input: { [key: string]: string } = {};
-  template.schemas.forEach((schema) => {
-    Object.entries(schema).forEach(([key, value]) => {
-      if (!value.readOnly) {
-        input[key] = value.content || '';
+  template.schemas.forEach((page) => {
+    page.forEach((schema) => {
+      if (!schema.readOnly) {
+        input[schema.name] = schema.content || '';
       }
     });
   });
@@ -90,19 +127,25 @@ export const getInputFromTemplate = (template: Template): { [key: string]: strin
   return [input];
 };
 
-export const getB64BasePdf = (basePdf: BasePdf) => {
-  const needFetchFromNetwork =
-    typeof basePdf === 'string' && !basePdf.startsWith('data:application/pdf;');
-  if (needFetchFromNetwork && typeof window !== 'undefined') {
-    return fetch(basePdf)
-      .then((res) => res.blob())
-      .then(blob2Base64Pdf)
-      .catch((e: Error) => {
-        throw e;
-      });
+export const getB64BasePdf = async (
+  customPdf: ArrayBuffer | Uint8Array | string
+): Promise<string> => {
+  if (
+    typeof customPdf === 'string' &&
+    !customPdf.startsWith('data:application/pdf;') &&
+    typeof window !== 'undefined'
+  ) {
+    const response = await fetch(customPdf);
+    const blob = await response.blob();
+    return blob2Base64Pdf(blob);
   }
 
-  return basePdf as string;
+  if (typeof customPdf === 'string') {
+    return customPdf;
+  }
+
+  const uint8Array = customPdf instanceof Uint8Array ? customPdf : new Uint8Array(customPdf);
+  return 'data:application/pdf;base64,' + Buffer.from(uint8Array).toString('base64');
 };
 
 export const isBlankPdf = (basePdf: BasePdf): basePdf is BlankPdf =>
@@ -122,10 +165,10 @@ export const b64toUint8Array = (base64: string) => {
   return unit8arr;
 };
 
-const getFontNamesInSchemas = (schemas: { [key: string]: Schema }[]) =>
+const getFontNamesInSchemas = (schemas: SchemaPageArray) =>
   uniq(
     schemas
-      .map((s) => Object.values(s).map((v) => (v as any).fontName ?? ''))
+      .map((p) => p.map((v) => (v as any).fontName ?? ''))
       .reduce((acc, cur) => acc.concat(cur), [] as (string | undefined)[])
       .filter(Boolean) as string[]
   );
@@ -167,7 +210,7 @@ export const checkPlugins = (arg: { plugins: Plugins; template: Template }) => {
     plugins,
     template: { schemas },
   } = arg;
-  const allSchemaTypes = uniq(schemas.map((s) => Object.values(s).map((v) => v.type)).flat());
+  const allSchemaTypes = uniq(schemas.map((p) => p.map((v) => v.type)).flat());
 
   const pluginsSchemaTypes = Object.values(plugins).map((p) => p?.propPanel.defaultSchema.type);
 
@@ -217,123 +260,21 @@ ${message}`);
 
 export const checkInputs = (data: unknown) => checkProps(data, InputsSchema);
 export const checkUIOptions = (data: unknown) => checkProps(data, UIOptionsSchema);
-export const checkTemplate = (data: unknown) => checkProps(data, TemplateSchema);
-export const checkUIProps = (data: unknown) => checkProps(data, UIPropsSchema);
 export const checkPreviewProps = (data: unknown) => checkProps(data, PreviewPropsSchema);
 export const checkDesignerProps = (data: unknown) => checkProps(data, DesignerPropsSchema);
-export const checkGenerateProps = (data: unknown) => checkProps(data, GeneratePropsSchema);
-
-interface ModifyTemplateForDynamicTableArg {
-  template: Template;
-  input: Record<string, string>;
-  _cache: Map<any, any>;
-  options: CommonOptions;
-  modifyTemplate: (arg: {
-    template: Template;
-    input: Record<string, string>;
-    _cache: Map<any, any>;
-    options: CommonOptions;
-  }) => Promise<Template>;
-  getDynamicHeight: (
-    value: string,
-    args: { schema: Schema; basePdf: BasePdf; options: CommonOptions; _cache: Map<any, any> }
-  ) => Promise<number>;
-}
-
-export const getDynamicTemplate = async (
-  arg: ModifyTemplateForDynamicTableArg
-): Promise<Template> => {
-  const { template, modifyTemplate } = arg;
-  if (!isBlankPdf(template.basePdf)) {
-    return template;
+export const checkUIProps = (data: unknown) => {
+  if (typeof data === 'object' && data !== null && 'template' in data) {
+    migrateTemplate(data.template as Template);
   }
-
-  const modifiedTemplate = await modifyTemplate(arg);
-
-  const diffMap = await calculateDiffMap({ ...arg, template: modifiedTemplate });
-
-  return normalizePositionsAndPageBreak(modifiedTemplate, diffMap);
+  checkProps(data, UIPropsSchema);
 };
-
-export const calculateDiffMap = async (arg: ModifyTemplateForDynamicTableArg) => {
-  const { template, input, _cache, options, getDynamicHeight } = arg;
-  const basePdf = template.basePdf;
-  const tmpDiffMap = new Map<number, number>();
-  if (!isBlankPdf(basePdf)) {
-    return tmpDiffMap;
-  }
-  const pageHeight = basePdf.height;
-  let pageIndex = 0;
-  for (const schemaObj of template.schemas) {
-    for (const [key, schema] of Object.entries(schemaObj)) {
-      const dynamicHeight = await getDynamicHeight(input?.[key] || '', {
-        schema,
-        basePdf,
-        options,
-        _cache,
-      });
-      if (schema.height !== dynamicHeight) {
-        tmpDiffMap.set(
-          schema.position.y + schema.height + pageHeight * pageIndex,
-          dynamicHeight - schema.height
-        );
-      }
-    }
-    pageIndex++;
-  }
-
-  const diffMap = new Map<number, number>();
-  const keys = Array.from(tmpDiffMap.keys()).sort((a, b) => a - b);
-  let additionalHeight = 0;
-
-  for (const key of keys) {
-    const value = tmpDiffMap.get(key) as number;
-    const newValue = value + additionalHeight;
-    diffMap.set(key + additionalHeight, newValue);
-    additionalHeight += newValue;
-  }
-
-  return diffMap;
+export const checkTemplate = (template: unknown) => {
+  migrateTemplate(template as Template);
+  checkProps(template, TemplateSchema);
 };
-
-export const normalizePositionsAndPageBreak = (
-  template: Template,
-  diffMap: Map<number, number>
-): Template => {
-  if (!isBlankPdf(template.basePdf) || diffMap.size === 0) {
-    return template;
+export const checkGenerateProps = (data: unknown) => {
+  if (typeof data === 'object' && data !== null && 'template' in data) {
+    migrateTemplate(data.template as Template);
   }
-
-  const returnTemplate: Template = { schemas: [{}], basePdf: template.basePdf };
-  const pages = returnTemplate.schemas;
-  const pageHeight = template.basePdf.height;
-  const paddingTop = template.basePdf.padding[0];
-  const paddingBottom = template.basePdf.padding[2];
-
-  for (let i = 0; i < template.schemas.length; i += 1) {
-    const schemaObj = template.schemas[i];
-    if (!pages[i]) pages[i] = {};
-
-    for (const [key, schema] of Object.entries(schemaObj)) {
-      const { position, height } = schema;
-      let newY = position.y;
-      let pageCursor = i;
-
-      for (const [diffKey, diffValue] of diffMap) {
-        if (newY > diffKey) {
-          newY += diffValue;
-        }
-      }
-
-      while (newY + height >= pageHeight - paddingBottom) {
-        newY = newY + paddingTop - (pageHeight - paddingBottom) + paddingTop;
-        pageCursor++;
-      }
-
-      if (!pages[pageCursor]) pages[pageCursor] = {};
-      pages[pageCursor][key] = { ...schema, position: { ...position, y: newY } };
-    }
-  }
-
-  return returnTemplate;
+  checkProps(data, GeneratePropsSchema);
 };

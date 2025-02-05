@@ -33,17 +33,17 @@ The following type, function and classes are available in pdfme.
 
 `@pdfme/common`
 
-- [Template](https://pdfme.com/docs/getting-started#template)
+- [Template](/docs/getting-started#template)
 
 `@pdfme/generator`
 
-- [generate](https://pdfme.com/docs/getting-started#generator)
+- [generate](/docs/getting-started#generator)
 
 `@pdfme/ui`
 
-- [Designer](https://pdfme.com/docs/getting-started#designer)
-- [Form](https://pdfme.com/docs/getting-started#form)
-- [Viewer](https://pdfme.com/docs/getting-started#viewer)
+- [Designer](/docs/getting-started#designer)
+- [Form](/docs/getting-started#form)
+- [Viewer](/docs/getting-started#viewer)
 
 If your environment uses webpack, import the necessary items as shown below.
 
@@ -78,7 +78,7 @@ A blank A4 PDF can be imported with `BLANK_PDF`. You can use it to check how it 
 
 **schemas** can only utilize text by default, but you can load images and various barcodes like QR codes as plugins from the `@pdfme/schemas` package.  
 Additionally, you can create your own schemas, allowing you to render types other than the ones mentioned above.  
-Check detail about [Custom Schemas](/docs/custom-schemas) from here
+Check detail about [Custom Schemas](/docs/custom-schemas).
 
 Let's take a look at some specific data.  
 (If you are using TypeScript, you can import the Template type.)
@@ -91,37 +91,118 @@ import { Template, BLANK_PDF } from '@pdfme/common';
 const template: Template = {
   basePdf: BLANK_PDF,
   schemas: [
-    {
-      a: {
+    [
+      {
+        name: 'a',
         type: 'text',
         position: { x: 0, y: 0 },
         width: 10,
         height: 10,
       },
-      b: {
+      {
+        name: 'b',
         type: 'text',
         position: { x: 10, y: 10 },
         width: 10,
         height: 10,
       },
-      c: {
+      {
+        name: 'c',
         type: 'text',
         position: { x: 20, y: 20 },
         width: 10,
         height: 10,
       },
-    },
+    ],
   ],
 };
 ```
 
 You can create a template from [Template Design page](/template-design). Or, if you want to integrate the template creation feature into your application, check out the [Designer section](/docs/getting-started#designer).
 
+### Using Plugins
+
+By default, examples often demonstrate the use of the `text` schema type. However, you can use other built-in schema types or even create your own custom schemas with the `@pdfme/schemas` package.
+
+#### Step 1: Install `@pdfme/schemas`
+
+Install the necessary package to access additional schema types.
+
+```bash
+npm install @pdfme/schemas
+```
+
+#### Step 2: Use Built-in and Custom Schema Types
+
+Here’s an example of a template using both built-in and custom schema types:
+
+```ts
+import { Template, BLANK_PDF } from '@pdfme/common';
+import { text, barcodes, image } from '@pdfme/schemas';
+import myCustomPlugin from './custom-plugins';
+
+const template: Template = {
+  basePdf: BLANK_PDF,
+  schemas: [
+    [
+      {
+        name: 'example_text',
+        type: 'text',
+        position: { x: 0, y: 0 },
+        width: 40,
+        height: 10,
+      },
+      {
+        name: 'example_image',
+        type: 'image',
+        position: { x: 200, y: 200 },
+        width: 60,
+        height: 40,
+      },
+      {
+        name: 'example_qr_code',
+        type: 'qrcode',
+        position: { x: 100, y: 100 },
+        width: 50,
+        height: 50,
+      },
+    ],
+  ],
+};
+
+const plugins = {
+  Text: multiVariableText,
+  'QR Code': barcodes.qrcode,
+  Image: image,
+  MyCustomPlugin: myCustomPlugin,
+};
+
+const inputs = [
+  {
+    example_text: 'Hello, World!',
+    example_image: 'data:image/png;base64,iVBORw0KG....',
+    example_qr_code: 'https://pdfme.com/',
+  },
+];
+
+generate({ template, inputs, plugins }).then((pdf) => {
+  console.log(pdf);
+});
+```
+
+#### Explore Built-in Schema Types
+
+To view all supported built-in schema types, refer to the [Supported Features Documentation](/docs/supported-features).
+
+#### Creating Custom Schema Types
+
+If you need a schema type that isn’t built-in, you can define your own. Check out the [Custom Schemas Guide](/docs/custom-schemas#creating-your-own-schemas) for detailed instructions.
+
 ## Generator
 
 The PDF generator function, `generate`, takes 2 arguments of `template` and `inputs` for generate a PDF. It works both in Node.js and in the browser.
 
-The code to generate a PDF file using the [template created above](/docs/getting-started#sample-template) is shown below.
+The code to generate a PDF file using the [template created above](/docs/getting-started#minimal-template) is shown below.
 
 ```ts
 import type { Template } from '@pdfme/common';
@@ -254,8 +335,24 @@ const viewer = new Viewer({ domContainer, template, inputs });
 - [antd](https://ant.design/): Used in building the UI.
 - [react-moveable](https://daybrush.com/moveable/), [react-selecto](https://github.com/daybrush/selecto), [@scena/react-guides](https://daybrush.com/guides/): Used in Designer UI.
 - [dnd-kit](https://github.com/clauderic/dnd-kit): Used in Designer UI.
+- [Lucide](https://lucide.dev/) Used in Designer UI and Schema's icon.
 
 I definitely could not have created pdfme without these libraries. I am grateful to the developers of these libraries.
 
 If you want to contribute to pdfme, please check the [Development Guide](/docs/development-guide) page.  
 We look forward to your contribution!
+
+## Cloud Service Option
+
+While pdfme is a powerful open-source library, we understand that some users might prefer a managed solution. For those looking for a ready-to-use, scalable PDF generation service without the need for setup and maintenance, we offer pdfme Cloud.
+
+**[Try pdfme Cloud - Hassle-free PDF Generation](https://app.pdfme.com?utm_source=website&utm_content=getting-started)**
+
+pdfme Cloud provides all the features of the open-source library, plus:
+
+- PDF generation at scale without infrastructure management
+- Hosted WYSIWYG template designer
+- Simple API integration
+- Automatic updates and maintenance
+
+\*pdfme is and will always remain open-source. The cloud service is an optional offering for those who prefer a managed solution.

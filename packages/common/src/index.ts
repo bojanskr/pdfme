@@ -1,14 +1,16 @@
+import {PDFME_VERSION} from './version';
 import {
-  PDFME_VERSION,
   MM_TO_PT_RATIO,
   PT_TO_MM_RATIO,
   PT_TO_PX_RATIO,
   BLANK_PDF,
   ZOOM,
   DEFAULT_FONT_NAME,
-} from './constants.js';
+} from './constants';
 import type {
+  ChangeSchemaItem,
   ChangeSchemas,
+  SchemaPageArray,
   PropPanel,
   PropPanelSchema,
   PropPanelWidgetProps,
@@ -34,8 +36,9 @@ import type {
   UIProps,
   PreviewProps,
   DesignerProps,
-} from './types.js';
+} from './types';
 import {
+  cloneDeep,
   getFallbackFontName,
   getDefaultFont,
   getB64BasePdf,
@@ -55,8 +58,9 @@ import {
   isHexValid,
   getInputFromTemplate,
   isBlankPdf,
-  getDynamicTemplate,
-} from './helper.js';
+} from './helper';
+import { getDynamicTemplate } from './dynamicTemplate';
+import { replacePlaceholders } from './expression';
 
 export {
   PDFME_VERSION,
@@ -66,6 +70,7 @@ export {
   BLANK_PDF,
   ZOOM,
   DEFAULT_FONT_NAME,
+  cloneDeep,
   getFallbackFontName,
   getDefaultFont,
   getB64BasePdf,
@@ -78,6 +83,7 @@ export {
   getInputFromTemplate,
   isBlankPdf,
   getDynamicTemplate,
+  replacePlaceholders,
   checkFont,
   checkInputs,
   checkUIOptions,
@@ -107,7 +113,9 @@ export type {
   UIProps,
   PreviewProps,
   DesignerProps,
+  ChangeSchemaItem,
   ChangeSchemas,
+  SchemaPageArray,
   PropPanel,
   PropPanelSchema,
   PropPanelWidgetProps,

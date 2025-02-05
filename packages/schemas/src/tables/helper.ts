@@ -56,6 +56,7 @@ export const getCellPropPanelSchema = (arg: {
       type: 'string',
       widget: 'select',
       default: fallbackFontName,
+      placeholder: fallbackFontName,
       props: { options: fontNames.map((name) => ({ label: name, value: name })) },
       span: 12,
     },
@@ -110,19 +111,28 @@ export const getCellPropPanelSchema = (arg: {
       title: i18n('schemas.textColor'),
       type: 'string',
       widget: 'color',
-      rules: [{ pattern: HEX_COLOR_PATTERN, message: i18n('hexColorPrompt') }],
+      props: {
+        disabledAlpha: true
+      },
+      rules: [{ pattern: HEX_COLOR_PATTERN, message: i18n('validation.hexColor') }],
     },
     borderColor: {
       title: i18n('schemas.borderColor'),
       type: 'string',
       widget: 'color',
-      rules: [{ pattern: HEX_COLOR_PATTERN, message: i18n('hexColorPrompt') }],
+      props: {
+        disabledAlpha: true
+      },
+      rules: [{ pattern: HEX_COLOR_PATTERN, message: i18n('validation.hexColor') }],
     },
     backgroundColor: {
       title: i18n('schemas.backgroundColor'),
       type: 'string',
       widget: 'color',
-      rules: [{ pattern: HEX_COLOR_PATTERN, message: i18n('hexColorPrompt') }],
+      props: {
+        disabledAlpha: true
+      },
+      rules: [{ pattern: HEX_COLOR_PATTERN, message: i18n('validation.hexColor') }],
     },
     ...(isBody
       ? {
@@ -130,7 +140,10 @@ export const getCellPropPanelSchema = (arg: {
             title: i18n('schemas.table.alternateBackgroundColor'),
             type: 'string',
             widget: 'color',
-            rules: [{ pattern: HEX_COLOR_PATTERN, message: i18n('hexColorPrompt') }],
+            props: {
+              disabledAlpha: true
+            },
+            rules: [{ pattern: HEX_COLOR_PATTERN, message: i18n('validation.hexColor') }],
           },
         }
       : {}),
@@ -186,10 +199,15 @@ export const getColumnStylesPropPanelSchema = ({
   },
 });
 
-export const getBody = (value: string) => JSON.parse(value || '[]') as string[][];
+export const getBody = (value: string | string[][]): string[][] => {
+  if (typeof value === 'string') {
+    return JSON.parse(value || '[]') as string[][];
+  }
+  return value || [];
+};
 
 export const getBodyWithRange = (
-  value: string,
+  value: string | string[][],
   range?: { start: number; end?: number | undefined }
 ) => {
   const body = getBody(value);

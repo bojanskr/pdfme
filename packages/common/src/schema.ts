@@ -6,6 +6,9 @@ export const Lang = z.enum(langs);
 export const Dict = z.object({
   // -----------------used in ui-----------------
   cancel: z.string(),
+  close: z.string(),
+  set: z.string(),
+  clear: z.string(),
   field: z.string(),
   fieldName: z.string(),
   align: z.string(),
@@ -14,6 +17,8 @@ export const Dict = z.object({
   height: z.string(),
   rotate: z.string(),
   edit: z.string(),
+  required: z.string(),
+  editable: z.string(),
   plsInputName: z.string(),
   fieldMustUniq: z.string(),
   notUniq: z.string(),
@@ -28,7 +33,11 @@ export const Dict = z.object({
   addPageAfter: z.string(),
   removePage: z.string(),
   removePageConfirm: z.string(),
-  hexColorPrompt: z.string(),
+  // --------------------validation-------------------
+  'validation.uniqueName': z.string(),
+  'validation.hexColor': z.string(),
+  'validation.dateTimeFormat': z.string(),
+
   // -----------------used in schemas-----------------
   'schemas.color': z.string(),
   'schemas.borderWidth': z.string(),
@@ -56,15 +65,29 @@ export const Dict = z.object({
   'schemas.text.max': z.string(),
   'schemas.text.fit': z.string(),
   'schemas.text.dynamicFontSize': z.string(),
+  'schemas.text.format': z.string(),
+
+  'schemas.mvt.typingInstructions': z.string(),
+  'schemas.mvt.sampleField': z.string(),
+  'schemas.mvt.variablesSampleData': z.string(),
 
   'schemas.barcodes.barColor': z.string(),
   'schemas.barcodes.includetext': z.string(),
 
   'schemas.table.alternateBackgroundColor': z.string(),
   'schemas.table.tableStyle': z.string(),
+  'schemas.table.showHead': z.string(),
   'schemas.table.headStyle': z.string(),
   'schemas.table.bodyStyle': z.string(),
   'schemas.table.columnStyle': z.string(),
+
+  'schemas.date.format': z.string(),
+  'schemas.date.locale': z.string(),
+
+  'schemas.select.options': z.string(),
+  'schemas.select.optionPlaceholder': z.string(),
+
+  'schemas.radioGroup.groupName': z.string(),
 });
 export const Mode = z.enum(['viewer', 'form', 'designer']);
 
@@ -74,8 +97,8 @@ export const Size = z.object({ height: z.number(), width: z.number() });
 
 export const Schema = z
   .object({
+    name: z.string(),
     type: z.string(),
-    icon: z.string().optional(),
     content: z.string().optional(),
     position: z.object({ x: z.number(), y: z.number() }),
     width: z.number(),
@@ -83,28 +106,36 @@ export const Schema = z
     rotate: z.number().optional(),
     opacity: z.number().optional(),
     readOnly: z.boolean().optional(),
+    required: z.boolean().optional(),
+    __bodyRange: z.object({ start: z.number(), end: z.number().optional() }).optional(),
+    __isSplit: z.boolean().optional(),
   })
   .passthrough();
 
-const SchemaForUIAdditionalInfo = z.object({
-  id: z.string(),
-  key: z.string(),
-});
+const SchemaForUIAdditionalInfo = z.object({ id: z.string() });
 export const SchemaForUI = Schema.merge(SchemaForUIAdditionalInfo);
 
 const ArrayBufferSchema: z.ZodSchema<ArrayBuffer> = z.any().refine((v) => v instanceof ArrayBuffer);
 const Uint8ArraySchema: z.ZodSchema<Uint8Array> = z.any().refine((v) => v instanceof Uint8Array);
+
 export const BlankPdf = z.object({
   width: z.number(),
   height: z.number(),
   padding: z.tuple([z.number(), z.number(), z.number(), z.number()]),
+  staticSchema: z.array(Schema).optional(),
 });
 
-export const BasePdf = z.union([z.string(), ArrayBufferSchema, Uint8ArraySchema, BlankPdf]);
+const CustomPdf = z.union([z.string(), ArrayBufferSchema, Uint8ArraySchema]);
+
+export const BasePdf = z.union([CustomPdf, BlankPdf]);
+
+// Legacy keyed structure for BC - we convert to SchemaPageArray on import
+export const LegacySchemaPageArray = z.array(z.record(Schema));
+export const SchemaPageArray = z.array(z.array(Schema));
 
 export const Template = z
   .object({
-    schemas: z.array(z.record(Schema)),
+    schemas: SchemaPageArray,
     basePdf: BasePdf,
     pdfmeVersion: z.string().optional(),
   })
@@ -136,7 +167,7 @@ export const GeneratorOptions = CommonOptions.extend({
   creationDate: z.date().optional(),
   creator: z.string().optional(),
   keywords: z.array(z.string()).optional(),
-  language: z.string().optional(),
+  lang: Lang.optional(),
   modificationDate: z.date().optional(),
   producer: z.string().optional(),
   subject: z.string().optional(),
@@ -154,6 +185,8 @@ export const UIOptions = CommonOptions.extend({
   lang: Lang.optional(),
   labels: z.record(z.string(), z.string()).optional(),
   theme: z.record(z.string(), z.unknown()).optional(),
+  icons: z.record(z.string(), z.string()).optional(),
+  requiredByDefault: z.boolean().optional(),
 });
 
 const HTMLElementSchema: z.ZodSchema<HTMLElement> = z.any().refine((v) => v instanceof HTMLElement);

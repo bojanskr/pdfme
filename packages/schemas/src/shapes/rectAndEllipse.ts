@@ -1,6 +1,8 @@
 import { Plugin, Schema, mm2pt } from '@pdfme/common';
 import { HEX_COLOR_PATTERN } from '../constants.js';
-import { hex2PrintingColor, convertForPdfLayoutProps } from '../utils.js';
+import { hex2PrintingColor, convertForPdfLayoutProps, createSvgStr } from '../utils.js';
+import { toRadians } from '@pdfme/pdf-lib';
+import { Circle, Square } from 'lucide';
 
 interface ShapeSchema extends Schema {
   type: 'ellipse' | 'rectangle';
@@ -56,8 +58,8 @@ const shape: Plugin<ShapeSchema> = {
       });
     } else if (schema.type === 'rectangle') {
       page.drawRectangle({
-        x: position.x + borderWidth / 2,
-        y: position.y + borderWidth / 2,
+        x: position.x + borderWidth * ((1 - Math.sin(toRadians(rotate))) / 2) + Math.tan(toRadians(rotate)) * (Math.PI ** 2),
+        y: position.y + borderWidth * ((1 + Math.sin(toRadians(rotate))) / 2) + Math.tan(toRadians(rotate)) * (Math.PI ** 2),
         width: width - borderWidth,
         height: height - borderWidth,
         ...drawOptions,
@@ -77,16 +79,23 @@ const shape: Plugin<ShapeSchema> = {
         title: i18n('schemas.borderColor'),
         type: 'string',
         widget: 'color',
-        rules: [{ pattern: HEX_COLOR_PATTERN, message: i18n('hexColorPrompt') }],
+        props: {
+          disabledAlpha: true
+        },
+        rules: [{ pattern: HEX_COLOR_PATTERN, message: i18n('validation.hexColor') }],
       },
       color: {
         title: i18n('schemas.color'),
         type: 'string',
         widget: 'color',
-        rules: [{ pattern: HEX_COLOR_PATTERN, message: i18n('hexColorPrompt') }],
+        props: {
+          disabledAlpha: true
+        },
+        rules: [{ pattern: HEX_COLOR_PATTERN, message: i18n('validation.hexColor') }],
       },
     }),
     defaultSchema: {
+      name: '',
       type: 'rectangle',
       position: { x: 0, y: 0 },
       width: 62.5,
@@ -101,20 +110,22 @@ const shape: Plugin<ShapeSchema> = {
   },
 };
 
-const rectangleIcon =
-  '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-square"><rect width="18" height="18" x="3" y="3" rx="2"/></svg>';
-const ellipseIcon =
-  '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-circle"><circle cx="12" cy="12" r="10"/></svg>';
-
 const getPropPanelSchema = (type: 'rectangle' | 'ellipse') => ({
   ...shape.propPanel,
   defaultSchema: {
     ...shape.propPanel.defaultSchema,
     type,
-    icon: type === 'rectangle' ? rectangleIcon : ellipseIcon,
   },
 });
 
-export const rectangle = { ...shape, propPanel: getPropPanelSchema('rectangle') };
+export const rectangle = {
+  ...shape,
+  propPanel: getPropPanelSchema('rectangle'),
+  icon: createSvgStr(Square),
+};
 
-export const ellipse = { ...shape, propPanel: getPropPanelSchema('ellipse') };
+export const ellipse = {
+  ...shape,
+  propPanel: getPropPanelSchema('ellipse'),
+  icon: createSvgStr(Circle),
+};

@@ -32,7 +32,8 @@
     }
   },
   "scripts": {
-    "dev": "tsc -p tsconfig.esm.json -w",
+    "dev": "node set-version.js && tsc -p tsconfig.esm.json -w",
+    "prebuild": "node set-version.js",
     "build": "npm-run-all --parallel build:cjs build:esm",
     "build:cjs": "tsc -p tsconfig.cjs.json",
     "build:esm": "tsc -p tsconfig.esm.json",
@@ -43,7 +44,8 @@
     "prettier": "prettier --write 'src/**/*.ts'"
   },
   "dependencies": {
-    "@pdfme/pdf-lib": "^1.18.3",
+    "@pdfme/pdf-lib": "*",
+    "acorn": "^8.14.0",
     "buffer": "^6.0.3",
     "zod": "^3.20.2"
   },
@@ -58,12 +60,12 @@
       "ts"
     ],
     "transform": {
-      "^.+\\.ts$": "ts-jest"
-    },
-    "globals": {
-      "ts-jest": {
-        "tsconfig": "tsconfig.esm.json"
-      }
+      "^.+\\.ts?$": [
+        "ts-jest",
+        {
+          "tsconfig": "tsconfig.esm.json"
+        }
+      ]
     },
     "testMatch": [
       "**/*.test.ts"
@@ -71,5 +73,8 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "devDependencies": {
+    "@types/estree": "^1.0.6"
   }
 }
